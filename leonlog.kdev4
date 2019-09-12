@@ -1,0 +1,25 @@
+[Project]
+Name=leonlog
+Manager=KDevCMakeManager
+VersionControl=kdevgit
+
+[Launch]
+Launch Configurations=Launch Configuration 0
+
+[Launch][Launch Configuration 0]
+Configured Launch Modes=execute
+Configured Launchers=nativeAppLauncher
+Name=leonlog Launcher
+Type=Shared Library
+
+[Launch][Launch Configuration 0][Data]
+Arguments=
+Dependencies=@Variant(\x00\x00\x00\t\x00\x00\x00\x00\x00)
+Dependency Action=Nothing
+EnvironmentGroup=
+Executable=file:///home/leon/projects/leonlog/build/bin/leonlog
+External Terminal=konsole --noclose --workdir %workdir -e %exe
+Project Target=leonlog
+Use External Terminal=true
+Working Directory=
+isExecutable=true
