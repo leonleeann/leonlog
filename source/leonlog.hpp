@@ -126,41 +126,51 @@ inline void appendLog( LogLevel_e logLevel, const std::string& logBody ) {
    appendLog( leon_log::LogLevel_e::ellFatal, ( strLogBody ) )
 #endif
 
-class Logger_t {
-public:
-   Logger_t( LogLevel_e p_enmLevel ) : m_LogLevel( p_enmLevel ) {};
-private:
-   std::ostringstream m_ossBuffer;
-   LogLevel_e m_LogLevel = LogLevel_e::ellDebug;
+struct Logger_t {
+// Logger_t( LogLevel_e p_enmLevel ) : m_LogLevel( p_enmLevel ) {};
 
-   friend Logger_t& endlog( Logger_t& );
-   friend Logger_t& operator<<( Logger_t&, std::function<Logger_t&( Logger_t& )> );
-   friend Logger_t& operator<<( Logger_t&, char );
-   friend Logger_t& operator<<( Logger_t&, wchar_t );
-   friend Logger_t& operator<<( Logger_t&, char32_t );
-   friend Logger_t& operator<<( Logger_t&, int8_t );
-   friend Logger_t& operator<<( Logger_t&, int16_t );
-   friend Logger_t& operator<<( Logger_t&, int32_t );
-   friend Logger_t& operator<<( Logger_t&, int64_t );
-   friend Logger_t& operator<<( Logger_t&, uint8_t );
-   friend Logger_t& operator<<( Logger_t&, uint16_t );
-   friend Logger_t& operator<<( Logger_t&, uint32_t );
-   friend Logger_t& operator<<( Logger_t&, uint64_t );
-   friend Logger_t& operator<<( Logger_t&, float );
-   friend Logger_t& operator<<( Logger_t&, double );
-   friend Logger_t& operator<<( Logger_t&, const char* );
-   friend Logger_t& operator<<( Logger_t&, const std::string& );
-   friend Logger_t& operator<<( Logger_t&, const void* );
+   // 释放本对象时一并输出,且本类可派生
+   virtual ~Logger_t() {
+      appendLog( m_LogLevel, m_ossBuffer.str() );
+   };
+
+   inline Logger_t& setlevel( LogLevel_e level ) {
+      m_LogLevel = level;
+      return *this;
+   };
+
+   // 把属性公开之后,就不需要后面那一堆友元函数了.关键是,用户自定义类型也可流式输出了!
+   LogLevel_e m_LogLevel = LogLevel_e::ellDebug;
+   std::ostringstream m_ossBuffer;
+   /*
+      friend Logger_t& endlog( Logger_t& );
+      friend Logger_t& operator<<( Logger_t&, std::function<Logger_t&( Logger_t& )> );
+      friend Logger_t& operator<<( Logger_t&, char );
+      friend Logger_t& operator<<( Logger_t&, wchar_t );
+      friend Logger_t& operator<<( Logger_t&, char32_t );
+      friend Logger_t& operator<<( Logger_t&, int8_t );
+      friend Logger_t& operator<<( Logger_t&, int16_t );
+      friend Logger_t& operator<<( Logger_t&, int32_t );
+      friend Logger_t& operator<<( Logger_t&, int64_t );
+      friend Logger_t& operator<<( Logger_t&, uint8_t );
+      friend Logger_t& operator<<( Logger_t&, uint16_t );
+      friend Logger_t& operator<<( Logger_t&, uint32_t );
+      friend Logger_t& operator<<( Logger_t&, uint64_t );
+      friend Logger_t& operator<<( Logger_t&, float );
+      friend Logger_t& operator<<( Logger_t&, double );
+      friend Logger_t& operator<<( Logger_t&, const char* );
+      friend Logger_t& operator<<( Logger_t&, const std::string& );
+      friend Logger_t& operator<<( Logger_t&, const void* );*/
 };
 
-inline Logger_t& endlog( Logger_t& rp_Logger ) {
+/*inline Logger_t& endlog( Logger_t& rp_Logger ) {
    appendLog( rp_Logger.m_LogLevel, rp_Logger.m_ossBuffer.str() );
 
    rp_Logger.m_ossBuffer.clear();
    rp_Logger.m_ossBuffer.str( "" );
 
    return rp_Logger;
-};
+};*/
 
 inline Logger_t& operator<<( Logger_t& rp_Logger,
                              std::function<Logger_t&( Logger_t& )> action ) {
@@ -251,11 +261,33 @@ inline Logger_t& operator<<( Logger_t& rp_Logger, const void* body ) {
    return rp_Logger;
 };
 
+/*
+extern thread_local Logger_t _logger;
 extern thread_local Logger_t log_debug;
 extern thread_local Logger_t log_infor;
 extern thread_local Logger_t log_notif;
 extern thread_local Logger_t log_warnn;
 extern thread_local Logger_t log_error;
-extern thread_local Logger_t log_fatal;
+extern thread_local Logger_t log_fatal;*/
+
+#ifdef DEBUG
+
+#define log_debug ( Logger_t().setlevel( ellDebug ) << __func__ << "()," )
+#define log_infor ( Logger_t().setlevel( ellInfor ) << __func__ << "()," )
+#define log_notif ( Logger_t().setlevel( ellNotif ) << __func__ << "()," )
+#define log_warnn ( Logger_t().setlevel( ellWarnn ) << __func__ << "()," )
+#define log_error ( Logger_t().setlevel( ellError ) << __func__ << "()," )
+#define log_fatal ( Logger_t().setlevel( ellFatal ) << __func__ << "()," )
+
+#else
+
+#define log_debug ( Logger_t().setlevel( ellDebug ) )
+#define log_infor ( Logger_t().setlevel( ellInfor ) )
+#define log_notif ( Logger_t().setlevel( ellNotif ) )
+#define log_warnn ( Logger_t().setlevel( ellWarnn ) )
+#define log_error ( Logger_t().setlevel( ellError ) )
+#define log_fatal ( Logger_t().setlevel( ellFatal ) )
+
+#endif
 
 };  // namespace leon_log

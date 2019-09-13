@@ -2,10 +2,16 @@ cmake_minimum_required(VERSION 3.0.0)
 
 set( PROJECT_VERSION_MAJOR 1 )   # 主版本
 set( PROJECT_VERSION_MINOR 2 )   # 次版本
-set( PROJECT_VERSION_PATCH 0 )   # 修订号(Bug fix)
+set( PROJECT_VERSION_PATCH 1 )   # 修订号(Bug fix)
+
+# 完整版本串
 set( PROJECT_VERSION ${PROJECT_VERSION_MAJOR}.${PROJECT_VERSION_MINOR}.${PROJECT_VERSION_PATCH} )
-set( PROJECT_VERSION_NOTES "从octopus项目剥离出来" )   # 版本说明
-set( PROJECT_DESCRIPTION   "线程安全的异步文件日志库" )  # 项目描述
+
+# 版本说明
+set( PROJECT_VERSION_NOTES "1.允许用户类型自定义流输出函数;2.日志头部输出本库版本;3.去掉endlog函数" )
+
+# 项目描述
+set( PROJECT_DESCRIPTION   "线程安全的异步文件日志库" )
 
 project( leonlog
    VERSION     ${PROJECT_VERSION}

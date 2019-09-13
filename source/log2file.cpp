@@ -45,14 +45,14 @@ using std::unique_ptr;
 namespace leon_log {
 
 LogLevel_e g_ellLogLevel = ellDebug;
-
+/*
 thread_local Logger_t log_debug( LogLevel_e::ellDebug );
 thread_local Logger_t log_infor( LogLevel_e::ellInfor );
 thread_local Logger_t log_notif( LogLevel_e::ellNotif );
 thread_local Logger_t log_warnn( LogLevel_e::ellWarnn );
 thread_local Logger_t log_error( LogLevel_e::ellError );
 thread_local Logger_t log_fatal( LogLevel_e::ellFatal );
-
+*/
 // 日志时间,用于日志时戳
 using LogTimePoint_T = time_point<system_clock, microseconds>;
 
@@ -285,7 +285,7 @@ void FileLogger_t::open( const string& crp_strLogFile,
    m_uiStampPrecision = p_uiStampPrecesion;
    g_ellLogLevel = p_enmLogLv;
    m_strLogFile = crp_strLogFile;
-   registThrdName( "MainThread" );
+   registThrdName( "主线程" );
    m_abShouldRun = true;
    asm volatile( "mfence" ::: "memory" );
    m_thdLogger = std::thread( &FileLogger_t::threadBody, this );
@@ -546,23 +546,13 @@ void FileLogger_t::semLoop() {
 
    aLog.m_enmLevel = LogLevel_e::ellNotif;
    aLog.m_tpStamp = SysTimePoint_T::clock::now();
-   if ( m_bRotating ) {
-#ifdef DEBUG
-      aLog.m_strBody = "------ 日志文件已轮转 ------";
-#else
+   if ( m_bRotating )
       aLog.m_strBody = "---------- 日志文件已轮转 ----------";
-#endif
-   } else {
-#ifdef DEBUG
-      aLog.m_strBody = "==== "
+   else
+      aLog.m_strBody = "====== leonlog-" + string( PROJECT_VERSION )
+                       + " 日志已启动("
                        + LOG_LEVEL_NAMES[ static_cast<int>( g_ellLogLevel ) ]
-                       + " 级日志已启动 ====";
-#else
-      aLog.m_strBody = "======== "
-                       + LOG_LEVEL_NAMES[ static_cast<int>( g_ellLogLevel ) ]
-                       + " 级日志已启动 ========";
-#endif
-   }
+                       + ") ======";
    writeLog( ofsLogFile, aLog, "Logger" );
 // std::cerr << aLog.m_strBody << std::endl;
    asm volatile( "mfence" ::: "memory" );
@@ -593,22 +583,14 @@ void FileLogger_t::semLoop() {
 
       aLog.m_enmLevel = LogLevel_e::ellNotif;
       aLog.m_tpStamp = SysTimePoint_T::clock::now();
-#ifdef DEBUG
-      aLog.m_strBody = "====== 日志系统已停止 ======";
-#else
-      aLog.m_strBody = "========== 日志系统已停止 ==========";
-#endif
+      aLog.m_strBody = "================ 日志已停止 =================";
       writeLog( ofsLogFile, aLog, "Logger" );
 //    std::cerr << aLog.m_strBody << std::endl;
 
    } else if ( m_bRotating ) {
       aLog.m_enmLevel = LogLevel_e::ellNotif;
       aLog.m_tpStamp = SysTimePoint_T::clock::now();
-#ifdef DEBUG
-      aLog.m_strBody = "------ 日志文件将轮转 ------";
-#else
       aLog.m_strBody = "---------- 日志文件将轮转 ----------";
-#endif
       writeLog( ofsLogFile, aLog, "Logger" );
 //    std::cerr << aLog.m_strBody << std::endl;
    }

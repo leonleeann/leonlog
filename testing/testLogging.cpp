@@ -20,19 +20,21 @@ void threadBody( uint64_t p_uiMyId ) {
 
    uint64_t j = 0;
    for ( ; j < g_uiInterval; ++j ) {
-      log_infor << j << leon_log::endlog;
-//    LOG_INFOR( to_string( j ) );
+//       Logger_t ll( ellDebug );
+//       ll.setlevel(ellDebug) << j;
+//       ( Logger_t().setlevel( ellInfor ) << __func__ << "()," ) << j;
+      log_debug << j;
+//    LOG_INFOR( "子线程日志..." + to_string( j ) );
       this_thread::sleep_for( nanoseconds( g_uiLasting ) );
    }
 
-// LOG_INFOR( myName + "总共循环:" + to_string( j ) );
-
-   log_infor << myName << "总共循环:" << j << leon_log::endlog;
+//   LOG_INFOR( myName + "总共循环:" + to_string( j ) );
+   log_infor << myName << "总共循环:" << j;
 };
 
 int main( int argc, char ** argv ) {
-   cout << leon_log::getVersion() << endl;
-   cout << "g_LogLevel[" << &g_ellLogLevel << "]:" << (int)g_ellLogLevel << endl;
+   cout << "日志库版本:" << leon_log::getVersion() << endl;
+//    cout << "g_LogLevel[" << &g_ellLogLevel << "]:" << (int)g_ellLogLevel << endl;
 
    size_t      uiLogQueSize = 1024;
    if ( argc > 1 )   // 线程数

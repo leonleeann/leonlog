@@ -42,5 +42,5 @@ else( )
    remove_definitions( -DDEBUG )
 endif( )
 
-add_subdirectory( source )
-# add_subdirectory( testing )
+# add_subdirectory( source )
+add_subdirectory( testing )
