@@ -4,10 +4,11 @@
 #include <map>
 #include <sstream>
 #include <string>
+#include <string_view>
 
 namespace leon_log {
 
-enum LogLevel_e {
+enum class LogLevel_e {
    // 供跟踪、调试时使用的日志, Release编译时不会生成相应代码
    ellDebug = 0,
 
@@ -35,18 +36,17 @@ enum LogLevel_e {
    VALUES_COUNT
 };
 
-const std::string LOG_LEVEL_NAMES[
-   static_cast<int>( LogLevel_e::VALUES_COUNT )] = {
-   "DEBUG",
-   "INFOR",
-   "NOTIF",
-   "WARNN",
-   "ERROR",
-   "FATAL"
+constexpr std::string_view LOG_LEVEL_NAMES[] = {
+   "DEBUG", // ellDebug
+   "INFOR", // ellInfor
+   "NOTIF", // ellNotif
+   "WARNN", // ellWarnn
+   "ERROR", // ellError
+   "FATAL"  // ellFatal
 };
 
 // static const LogLevel_e g_ellLogLevel = ellDebug;
-extern LogLevel_e g_ellLogLevel;
+static LogLevel_e g_ellLogLevel;
 
 /* thread::get_id()返回的不是操作系统内真正的线程id,我们要通过OS的工具(top)监测优化
  * 本系统内的各个线程,就必须要知道各线程在OS层面的id.所以每个线程来调用registThrdName
@@ -126,167 +126,44 @@ inline void appendLog( LogLevel_e logLevel, const std::string& logBody ) {
    appendLog( leon_log::LogLevel_e::ellFatal, ( strLogBody ) )
 #endif
 
-struct Logger_t {
-// Logger_t( LogLevel_e p_enmLevel ) : m_LogLevel( p_enmLevel ) {};
+class Logger_t : public std::ostringstream {
+public:
+   explicit Logger_t( LogLevel_e p_enmLevel ) : m_LogLevel( p_enmLevel ) {};
 
    // 释放本对象时一并输出,且本类可派生
    virtual ~Logger_t() {
-      appendLog( m_LogLevel, m_ossBuffer.str() );
-   };
-
-   inline Logger_t& setlevel( LogLevel_e level ) {
-      m_LogLevel = level;
-      return *this;
+      appendLog( m_LogLevel, str() );
    };
 
    // 把属性公开之后,就不需要后面那一堆友元函数了.关键是,用户自定义类型也可流式输出了!
-   LogLevel_e m_LogLevel = LogLevel_e::ellDebug;
-   std::ostringstream m_ossBuffer;
-   /*
-      friend Logger_t& endlog( Logger_t& );
-      friend Logger_t& operator<<( Logger_t&, std::function<Logger_t&( Logger_t& )> );
-      friend Logger_t& operator<<( Logger_t&, char );
-      friend Logger_t& operator<<( Logger_t&, wchar_t );
-      friend Logger_t& operator<<( Logger_t&, char32_t );
-      friend Logger_t& operator<<( Logger_t&, int8_t );
-      friend Logger_t& operator<<( Logger_t&, int16_t );
-      friend Logger_t& operator<<( Logger_t&, int32_t );
-      friend Logger_t& operator<<( Logger_t&, int64_t );
-      friend Logger_t& operator<<( Logger_t&, uint8_t );
-      friend Logger_t& operator<<( Logger_t&, uint16_t );
-      friend Logger_t& operator<<( Logger_t&, uint32_t );
-      friend Logger_t& operator<<( Logger_t&, uint64_t );
-      friend Logger_t& operator<<( Logger_t&, float );
-      friend Logger_t& operator<<( Logger_t&, double );
-      friend Logger_t& operator<<( Logger_t&, const char* );
-      friend Logger_t& operator<<( Logger_t&, const std::string& );
-      friend Logger_t& operator<<( Logger_t&, const void* );*/
+   LogLevel_e m_LogLevel;
 };
 
-/*inline Logger_t& endlog( Logger_t& rp_Logger ) {
-   appendLog( rp_Logger.m_LogLevel, rp_Logger.m_ossBuffer.str() );
+template <typename T>
+inline Logger_t& operator<<( Logger_t& lgr, const T& body ) {
+   if ( lgr.m_LogLevel >= g_ellLogLevel )
+      dynamic_cast<std::ostringstream&>( lgr ) << body;
 
-   rp_Logger.m_ossBuffer.clear();
-   rp_Logger.m_ossBuffer.str( "" );
-
-   return rp_Logger;
-};*/
-
-inline Logger_t& operator<<( Logger_t& rp_Logger,
-                             std::function<Logger_t&( Logger_t& )> action ) {
-   if ( rp_Logger.m_LogLevel >= g_ellLogLevel )
-      return action( rp_Logger );
-   else
-      return rp_Logger;
+   return lgr;
 };
-
-inline Logger_t& operator<<( Logger_t& rp_Logger, char body ) {
-   if ( rp_Logger.m_LogLevel >= g_ellLogLevel )
-      rp_Logger.m_ossBuffer << body;
-   return rp_Logger;
-};
-inline Logger_t& operator<<( Logger_t& rp_Logger, wchar_t body ) {
-   if ( rp_Logger.m_LogLevel >= g_ellLogLevel )
-      rp_Logger.m_ossBuffer << body;
-   return rp_Logger;
-};
-inline Logger_t& operator<<( Logger_t& rp_Logger, char32_t body ) {
-   if ( rp_Logger.m_LogLevel >= g_ellLogLevel )
-      rp_Logger.m_ossBuffer << body;
-   return rp_Logger;
-};
-inline Logger_t& operator<<( Logger_t& rp_Logger, int8_t    body ) {
-   if ( rp_Logger.m_LogLevel >= g_ellLogLevel )
-      rp_Logger.m_ossBuffer << body;
-   return rp_Logger;
-};
-inline Logger_t& operator<<( Logger_t& rp_Logger, int16_t   body ) {
-   if ( rp_Logger.m_LogLevel >= g_ellLogLevel )
-      rp_Logger.m_ossBuffer << body;
-   return rp_Logger;
-};
-inline Logger_t& operator<<( Logger_t& rp_Logger, int32_t   body ) {
-   if ( rp_Logger.m_LogLevel >= g_ellLogLevel )
-      rp_Logger.m_ossBuffer << body;
-   return rp_Logger;
-};
-inline Logger_t& operator<<( Logger_t& rp_Logger, int64_t   body ) {
-   if ( rp_Logger.m_LogLevel >= g_ellLogLevel )
-      rp_Logger.m_ossBuffer << body;
-   return rp_Logger;
-};
-inline Logger_t& operator<<( Logger_t& rp_Logger, uint8_t   body ) {
-   if ( rp_Logger.m_LogLevel >= g_ellLogLevel )
-      rp_Logger.m_ossBuffer << body;
-   return rp_Logger;
-};
-inline Logger_t& operator<<( Logger_t& rp_Logger, uint16_t  body ) {
-   if ( rp_Logger.m_LogLevel >= g_ellLogLevel )
-      rp_Logger.m_ossBuffer << body;
-   return rp_Logger;
-};
-inline Logger_t& operator<<( Logger_t& rp_Logger, uint32_t  body ) {
-   if ( rp_Logger.m_LogLevel >= g_ellLogLevel )
-      rp_Logger.m_ossBuffer << body;
-   return rp_Logger;
-};
-inline Logger_t& operator<<( Logger_t& rp_Logger, uint64_t  body ) {
-   if ( rp_Logger.m_LogLevel >= g_ellLogLevel )
-      rp_Logger.m_ossBuffer << body;
-   return rp_Logger;
-};
-inline Logger_t& operator<<( Logger_t& rp_Logger, float     body ) {
-   if ( rp_Logger.m_LogLevel >= g_ellLogLevel )
-      rp_Logger.m_ossBuffer << body;
-   return rp_Logger;
-};
-inline Logger_t& operator<<( Logger_t& rp_Logger, double    body ) {
-   if ( rp_Logger.m_LogLevel >= g_ellLogLevel )
-      rp_Logger.m_ossBuffer << body;
-   return rp_Logger;
-};
-inline Logger_t& operator<<( Logger_t& rp_Logger, const char* body ) {
-   if ( rp_Logger.m_LogLevel >= g_ellLogLevel )
-      rp_Logger.m_ossBuffer << body;
-   return rp_Logger;
-};
-inline Logger_t& operator<<( Logger_t& rp_Logger, const std::string& body ) {
-   if ( rp_Logger.m_LogLevel >= g_ellLogLevel )
-      rp_Logger.m_ossBuffer << body;
-   return rp_Logger;
-};
-inline Logger_t& operator<<( Logger_t& rp_Logger, const void* body ) {
-   if ( rp_Logger.m_LogLevel >= g_ellLogLevel )
-      rp_Logger.m_ossBuffer << body;
-   return rp_Logger;
-};
-
-/*
-extern thread_local Logger_t _logger;
-extern thread_local Logger_t log_debug;
-extern thread_local Logger_t log_infor;
-extern thread_local Logger_t log_notif;
-extern thread_local Logger_t log_warnn;
-extern thread_local Logger_t log_error;
-extern thread_local Logger_t log_fatal;*/
 
 #ifdef DEBUG
 
-#define log_debug ( Logger_t().setlevel( ellDebug ) << __func__ << "()," )
-#define log_infor ( Logger_t().setlevel( ellInfor ) << __func__ << "()," )
-#define log_notif ( Logger_t().setlevel( ellNotif ) << __func__ << "()," )
-#define log_warnn ( Logger_t().setlevel( ellWarnn ) << __func__ << "()," )
-#define log_error ( Logger_t().setlevel( ellError ) << __func__ << "()," )
-#define log_fatal ( Logger_t().setlevel( ellFatal ) << __func__ << "()," )
+#define log_debug ( Logger_t( LogLevel_e::ellDebug ) << __func__ << "()," )
+#define log_infor ( Logger_t( LogLevel_e::ellInfor ) << __func__ << "()," )
+#define log_notif ( Logger_t( LogLevel_e::ellNotif ) << __func__ << "()," )
+#define log_warnn ( Logger_t( LogLevel_e::ellWarnn ) << __func__ << "()," )
+#define log_error ( Logger_t( LogLevel_e::ellError ) << __func__ << "()," )
+#define log_fatal ( Logger_t( LogLevel_e::ellFatal ) << __func__ << "()," )
 
 #else
 
-#define log_debug ( Logger_t().setlevel( ellDebug ) )
-#define log_infor ( Logger_t().setlevel( ellInfor ) )
-#define log_notif ( Logger_t().setlevel( ellNotif ) )
-#define log_warnn ( Logger_t().setlevel( ellWarnn ) )
-#define log_error ( Logger_t().setlevel( ellError ) )
-#define log_fatal ( Logger_t().setlevel( ellFatal ) )
+#define log_debug ( Logger_t( LogLevel_e::ellDebug ) )
+#define log_infor ( Logger_t( LogLevel_e::ellInfor ) )
+#define log_notif ( Logger_t( LogLevel_e::ellNotif ) )
+#define log_warnn ( Logger_t( LogLevel_e::ellWarnn ) )
+#define log_error ( Logger_t( LogLevel_e::ellError ) )
+#define log_fatal ( Logger_t( LogLevel_e::ellFatal ) )
 
 #endif
 

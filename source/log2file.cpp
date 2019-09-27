@@ -44,15 +44,8 @@ using std::unique_ptr;
 
 namespace leon_log {
 
-LogLevel_e g_ellLogLevel = ellDebug;
-/*
-thread_local Logger_t log_debug( LogLevel_e::ellDebug );
-thread_local Logger_t log_infor( LogLevel_e::ellInfor );
-thread_local Logger_t log_notif( LogLevel_e::ellNotif );
-thread_local Logger_t log_warnn( LogLevel_e::ellWarnn );
-thread_local Logger_t log_error( LogLevel_e::ellError );
-thread_local Logger_t log_fatal( LogLevel_e::ellFatal );
-*/
+// LogLevel_e g_ellLogLevel = ellDebug;
+
 // 日志时间,用于日志时戳
 using LogTimePoint_T = time_point<system_clock, microseconds>;
 
@@ -551,7 +544,7 @@ void FileLogger_t::semLoop() {
    else
       aLog.m_strBody = "====== leonlog-" + string( PROJECT_VERSION )
                        + " 日志已启动("
-                       + LOG_LEVEL_NAMES[ static_cast<int>( g_ellLogLevel ) ]
+                       + string( LOG_LEVEL_NAMES[(int)g_ellLogLevel] )
                        + ") ======";
    writeLog( ofsLogFile, aLog, "Logger" );
 // std::cerr << aLog.m_strBody << std::endl;

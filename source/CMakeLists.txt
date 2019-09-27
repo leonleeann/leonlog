@@ -2,13 +2,13 @@ cmake_minimum_required(VERSION 3.0.0)
 
 set( PROJECT_VERSION_MAJOR 1 )   # 主版本
 set( PROJECT_VERSION_MINOR 2 )   # 次版本
-set( PROJECT_VERSION_PATCH 1 )   # 修订号(Bug fix)
+set( PROJECT_VERSION_PATCH 2 )   # 修订号(Bug fix)
 
 # 完整版本串
 set( PROJECT_VERSION ${PROJECT_VERSION_MAJOR}.${PROJECT_VERSION_MINOR}.${PROJECT_VERSION_PATCH} )
 
 # 版本说明
-set( PROJECT_VERSION_NOTES "1.允许用户类型自定义流输出函数;2.日志头部输出本库版本;3.去掉endlog函数" )
+set( PROJECT_VERSION_NOTES "1.增加对string_view的支持;2.LOG_LEVEL_NAMES改用string_view" )
 
 # 项目描述
 set( PROJECT_DESCRIPTION   "线程安全的异步文件日志库" )
@@ -33,6 +33,8 @@ set_target_properties( leonlog PROPERTIES
    PUBLIC_HEADER  leonlog.hpp
 )
 
+message( STATUS "CMAKE_INSTALL_LIBDIR:\"${CMAKE_INSTALL_LIBDIR}\"" )
+message( STATUS "CMAKE_INSTALL_INCLUDEDIR:\"${CMAKE_INSTALL_INCLUDEDIR}\"" )
 install( TARGETS leonlog
    ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
    PUBLIC_HEADER DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}

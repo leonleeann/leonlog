@@ -1,6 +1,7 @@
 #include <chrono>
 #include <iomanip>
 #include <iostream>
+#include <string_view>
 #include <thread>
 #include <vector>
 
@@ -17,13 +18,16 @@ uint64_t       g_uiLasting = 32;
 void threadBody( uint64_t p_uiMyId ) {
    string myName = string( "线程" ) + to_string( p_uiMyId );
    registThrdName( myName );
+   string_view sv { myName.c_str() };
 
    uint64_t j = 0;
    for ( ; j < g_uiInterval; ++j ) {
-//       Logger_t ll( ellDebug );
-//       ll.setlevel(ellDebug) << j;
-//       ( Logger_t().setlevel( ellInfor ) << __func__ << "()," ) << j;
-      log_debug << j;
+//    Logger_t ll( LogLevel_e::ellDebug );
+//       ll << j;
+
+//    ( Logger_t().setlevel( ellInfor ) << __func__ << "()," ) << j;
+      log_debug << sv << ":" << j;
+
 //    LOG_INFOR( "子线程日志..." + to_string( j ) );
       this_thread::sleep_for( nanoseconds( g_uiLasting ) );
    }
