@@ -144,7 +144,7 @@ public:
 
    // 释放本对象时一并输出,且本类可派生
    ~Logger_t() override {
-      appendLog( m_LogLevel, std::move( str() ) );
+      appendLog( m_LogLevel, str() );
    };
 
    inline operator bool() {
