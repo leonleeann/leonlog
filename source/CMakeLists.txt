@@ -1,14 +1,14 @@
 cmake_minimum_required(VERSION 3.0.0)
 
 set( PROJECT_VERSION_MAJOR 1 )   # 主版本
-set( PROJECT_VERSION_MINOR 2 )   # 次版本
-set( PROJECT_VERSION_PATCH 2 )   # 修订号(Bug fix)
+set( PROJECT_VERSION_MINOR 3 )   # 次版本
+set( PROJECT_VERSION_PATCH 0 )   # 修订号(Bug fix)
 
 # 完整版本串
 set( PROJECT_VERSION ${PROJECT_VERSION_MAJOR}.${PROJECT_VERSION_MINOR}.${PROJECT_VERSION_PATCH} )
 
 # 版本说明
-set( PROJECT_VERSION_NOTES "1.增加对string_view的支持;2.LOG_LEVEL_NAMES改用string_view" )
+set( PROJECT_VERSION_NOTES "1.流式输出和函数形式都能根据当前日志级别快速短路;2.增加对string_view的支持;3.LOG_LEVEL_NAMES改用string_view" )
 
 # 项目描述
 set( PROJECT_DESCRIPTION   "线程安全的异步文件日志库" )

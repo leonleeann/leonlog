@@ -1,6 +1,7 @@
 #include <algorithm>
 #include <atomic>
 #include <chrono>
+#include <cmath>
 #include <cstring>
 #include <filesystem>
 #include <fstream>
@@ -89,8 +90,8 @@ public:
    ~FileLogger_t();
    // 启动日志系统, 指定日志文件名
    void open( const string&   crp_strLogFile,
-              LogLevel_e      p_enmLogLv,
-              uint64_t        p_uiStampPrecesion,
+              LogLevel_e      p_enmLogLevel,
+              size_t          p_uiStampPrecesion,
               size_t          p_uiLogQueCapa );
    // 关闭日志, 并Flush所有日志到磁盘
    void close();
@@ -100,7 +101,7 @@ public:
    void registThrdName( const string& crp_strName );
 
    // 添加日志的主函数, 其实此函数只是把日志加入队列, 等待日志线程来写入文件
-   void appendLog( LogLevel_e p_enmLevel, string&& rrp_strBody );
+   void append( LogLevel_e p_enmLevel, string&& rrp_strBody );
 
    // 设置每个日志队列的容量
    const size_t& LogQueCapa = m_uiLogQueCapa;
@@ -143,8 +144,12 @@ private:
 
    // 单个日志队列的容量
    size_t   m_uiLogQueCapa = DEFAULT_LOG_QUE_SIZE;
+
    // 时戳精度(0~9代表精确到秒的几位小数)
-   uint64_t m_uiStampPrecision = 6;
+   size_t   m_uiStampPrecision = 6;
+   // 每次
+   uint64_t m_uiStampUnitBase;
+
    // 日志文件名, 包含全路径
    string   m_strLogFile;
    // 日志文件名中缀, 用于日志文件轮转
@@ -232,7 +237,6 @@ extern "C" void startLogging( const string& crp_strLogFile,
 //    std::cout << "leon_log::pLL:" << pLL << std::endl;
 //    *pLL = p_enmLogLevel;
 //    const_cast<LogLevel_e&>( g_ellLogLevel ) = p_enmLogLevel;
-   g_ellLogLevel = p_enmLogLevel;
    s_fileLogger.open( crp_strLogFile,
                       p_enmLogLevel, p_uiStampPrecision, p_uiLogQueSize );
 };
@@ -249,8 +253,13 @@ extern "C" void registThrdName( const string& crp_strName ) {
    s_fileLogger.registThrdName( crp_strName );
 };
 
-extern "C" void appendLog0( LogLevel_e p_enmLevel, string&& rrp_strBody ) {
-   s_fileLogger.appendLog( p_enmLevel, std::move( rrp_strBody ) );
+extern "C" bool appendLog( LogLevel_e p_enmLevel, string&& rrp_strBody ) {
+   // 只有不低于门限值的日志才能得到输出
+   if ( p_enmLevel < g_ellLogLevel )
+      return false;
+
+   s_fileLogger.append( p_enmLevel, std::move( rrp_strBody ) );
+   return true;
 };
 /* extern "C" void appendLog1( LogLevel_e p_enmLevel, const string& crp_strBody ) {
    flog.appendLog( p_enmLevel, string( crp_strBody ) );
@@ -268,15 +277,20 @@ FileLogger_t::~FileLogger_t() {
 };
 
 void FileLogger_t::open( const string& crp_strLogFile,
-                         LogLevel_e    p_enmLogLv,
-                         uint64_t      p_uiStampPrecesion,
+                         LogLevel_e    p_enmLogLevel,
+                         size_t        p_uiStampPrecesion,
                          size_t        p_uiLogQueCapa ) {
    if ( m_abRunning )
       throw bad_usage( "日志系统已启动, 不能重复初始化!" );
 
    m_uiLogQueCapa = p_uiLogQueCapa;
-   m_uiStampPrecision = p_uiStampPrecesion;
-   g_ellLogLevel = p_enmLogLv;
+   m_uiStampPrecision =
+      std::min<decltype( m_uiStampPrecision )>( p_uiStampPrecesion, 9 );
+   m_uiStampUnitBase  = std::pow( 10.0, 9 - m_uiStampPrecision );
+
+   g_ellLogLevel = std::min( LogLevel_e::ellFatal,
+                             std::max( LogLevel_e::ellDebug,
+                                       p_enmLogLevel ) );
    m_strLogFile = crp_strLogFile;
    registThrdName( "主线程" );
    m_abShouldRun = true;
@@ -353,12 +367,8 @@ void FileLogger_t::registThrdName( const string& crp_strName ) {
 };
 
 // 添加日志的主函数, 此处是实现。其实此函数只是把日志加入队列, 等待日志线程来写入文件
-void FileLogger_t::appendLog( LogLevel_e p_enmLevel,
+void FileLogger_t::append( LogLevel_e p_enmLevel,
                               string&& rrp_strBody ) {
-   // 只有不低于门限值的日志才能得到输出
-   if ( p_enmLevel < g_ellLogLevel )
-      return;
-
    // 日志系统必须已经启动
    if ( ! m_abRunning ) {
       // throw bad_usage( "日志系统尚未启动, 不能添加日志:" + rrp_strBody );
@@ -474,7 +484,7 @@ inline bool FileLogger_t::pickOneLog( LogEntry_T & rp_log,
    return bFound;
 };
 
-const char * const LOG_STAMP_FORMAT = "%m/%d %H:%M:%S.";
+const char * const LOG_STAMP_FORMAT = "%m/%d %H:%M:%S";
 
 inline void FileLogger_t::writeLog( ofstream & p_out,
                                     const LogEntry_T & crp_log,
@@ -482,19 +492,27 @@ inline void FileLogger_t::writeLog( ofstream & p_out,
    SysTimePoint_T tpSecPart =
       time_point_cast<SysTimePoint_T::duration>(
          std::chrono::floor<seconds>( crp_log.m_tpStamp ) );
-   double dfUnderSec =
-      duration_cast<std::chrono::duration<double, std::nano>>( crp_log.m_tpStamp - tpSecPart ).count()
-      / std::pow( 10.0, 9 - m_uiStampPrecision );
+   // 输出时戳
+   p_out << formatTimeP( tpSecPart, LOG_STAMP_FORMAT );
 
-   p_out << formatTimeP( tpSecPart, LOG_STAMP_FORMAT )
-         << formatNumber( dfUnderSec, m_uiStampPrecision, 0, 0, '0' )
-         << "," << LOG_LEVEL_NAMES[( int )crp_log.m_enmLevel ]
-         << "," << crp_strThreadName
-         << "," << crp_log.m_strBody << "\n";
+   // 是否精确到秒以下
+   if ( m_uiStampPrecision > 0 ) {
+      uint64_t uiUnderSec =
+         duration_cast<nanoseconds>( crp_log.m_tpStamp - tpSecPart ).count();
+      uiUnderSec /= m_uiStampUnitBase;
+      p_out << '.'
+            << formatNumber( uiUnderSec, m_uiStampPrecision, 0, 0, '0' );
+   }
 
-   std::cerr << LOG_LEVEL_NAMES[( int )crp_log.m_enmLevel ]
-             << "," << crp_strThreadName
-             << "," << crp_log.m_strBody << "\n";
+   p_out
+         << ',' << LOG_LEVEL_NAMES[( int )crp_log.m_enmLevel ]
+         << ',' << crp_strThreadName
+         << ',' << crp_log.m_strBody << "\n";
+
+   std::cerr
+         << LOG_LEVEL_NAMES[( int )crp_log.m_enmLevel ]
+         << ',' << crp_strThreadName
+         << ',' << crp_log.m_strBody << "\n";
 };
 
 void FileLogger_t::threadBody() {
@@ -544,7 +562,7 @@ void FileLogger_t::semLoop() {
    else
       aLog.m_strBody = "====== leonlog-" + string( PROJECT_VERSION )
                        + " 日志已启动("
-                       + string( LOG_LEVEL_NAMES[(int)g_ellLogLevel] )
+                       + string( LOG_LEVEL_NAMES[( int )g_ellLogLevel] )
                        + ") ======";
    writeLog( ofsLogFile, aLog, "Logger" );
 // std::cerr << aLog.m_strBody << std::endl;
