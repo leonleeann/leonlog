@@ -79,7 +79,6 @@ extern "C" void registThrdName( const std::string& crp_strName );
 
 // 添加日志的主函数
 extern "C" bool appendLog( LogLevel_e logLevel, std::string&& logBody );
-// extern "C" void appendLog1( LogLevel_e logLevel, const std::string& logBody );
 
 /* Linux 动态库不能支持C++函数的 overloading (参见 symbol name mangle),
  * 因此动态库能够导出的函数只能是C语言的普通函数(extern "C"),
@@ -88,7 +87,7 @@ inline bool appendLog_( LogLevel_e logLevel, std::string&& logBody ) {
    if ( logLevel >= g_ellLogLevel )
       appendLog( logLevel, std::move( logBody ) );
 };*/
-inline bool appendLog_( LogLevel_e logLevel, const std::string& logBody ) {
+inline bool appendLog( LogLevel_e logLevel, const std::string& logBody ) {
    // 只有不低于门限值的日志才能得到输出
    if ( logLevel < g_ellLogLevel )
       return false;

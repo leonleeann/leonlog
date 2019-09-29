@@ -261,9 +261,6 @@ extern "C" bool appendLog( LogLevel_e p_enmLevel, string&& rrp_strBody ) {
    s_fileLogger.append( p_enmLevel, std::move( rrp_strBody ) );
    return true;
 };
-/* extern "C" void appendLog1( LogLevel_e p_enmLevel, const string& crp_strBody ) {
-   flog.appendLog( p_enmLevel, string( crp_strBody ) );
-}; */
 
 FileLogger_t::FileLogger_t() {
    if ( sem_init( &m_semNewLog, 0, 0 ) )

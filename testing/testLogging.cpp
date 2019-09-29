@@ -1,11 +1,12 @@
 #include <chrono>
 #include <iomanip>
 #include <iostream>
+#include <leonlog>
 #include <string_view>
 #include <thread>
 #include <vector>
 
-#include <leonlog>
+#include "misc/LifeCycleWatcher.hpp"
 
 using namespace std;
 using namespace std::chrono;
@@ -66,28 +67,31 @@ int main( int argc, char ** argv ) {
    cout << "日志级别:" << LOG_LEVEL_NAMES[( int )g_ellLogLevel] << endl;
 
    startLogging( "testLogging.log", g_ellLogLevel, 3, uiLogQueSize );
-
+/*
    std::vector<thread> thrds;
    uint64_t k = 0;
    for ( ; k < g_uiThrds; ++k ) {
       thrds.push_back( thread( threadBody, k ) );
    }
+*/
+   LifeCycleWatcher_t lcw { "lcw000" };
+//    log_debug << "一条调试日志" + lcw;
+   LOG_DEBUG( "一条调试日志" + lcw );
 
-   log_debug << "一条调试日志";
-   log_infor << "一条信息日志";
-   log_notif << "一条通告日志";
-   log_warnn << "一条警告日志";
-   log_error << "一条错误日志";
-   log_fatal << "一条失败日志";
+   LOG_INFOR( "一条信息日志" );
+   log_notif << "一条通告日志" << lcw;
+   log_warnn << "一条警告日志" << lcw;
+   log_error << "一条错误日志" << lcw;
+   log_fatal << "一条失败日志" << lcw;
 
    // 故意中途轮转日志,看看谁跑得快
    rotateLog( "1234" );
-
+/*
    k = 0;
    for ( ; k < g_uiThrds; ++k ) {
       thrds[k].join();
    }
-
+*/
    stopLogging();
    return EXIT_SUCCESS;
 };
