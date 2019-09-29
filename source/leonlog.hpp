@@ -158,8 +158,9 @@ public:
 template <typename T>
 inline Logger_t& operator<<( Logger_t& logger, const T& body ) {
    if ( logger.m_LogLevel >= g_ellLogLevel )
-      dynamic_cast<std::ostringstream&>( logger ) << body;
-//       dynamic_cast<std::ostringstream&>( logger ).operator<< ( body );
+      static_cast<std::ostringstream&>( logger ) << body;
+//    dynamic_cast<std::ostringstream&>( logger ) << body;
+//    dynamic_cast<std::ostringstream&>( logger ).operator<<( body );
 
    return logger;
 //    return std::ostringstream::operator<<( body );

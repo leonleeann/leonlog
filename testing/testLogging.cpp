@@ -5,7 +5,7 @@
 #include <thread>
 #include <vector>
 
-#include <leonlog.hpp>
+#include <leonlog>
 
 using namespace std;
 using namespace std::chrono;
