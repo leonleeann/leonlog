@@ -46,8 +46,10 @@ constexpr std::string_view LOG_LEVEL_NAMES[] = {
    "FATAL"  // ellFatal
 };
 
-// static const LogLevel_e g_ellLogLevel = ellDebug;
-static LogLevel_e g_ellLogLevel;
+extern LogLevel_e g_ellLogLevel;
+/* static 会导致多重"影子"变量,下面这些都不行!
+   static LogLevel_e g_ellLogLevel = LogLevel_e::ellDebug;
+   static const LogLevel_e g_ellLogLevel = LogLevel_e::ellDebug; */
 
 /* thread::get_id()返回的不是操作系统内真正的线程id,我们要通过OS的工具(top)监测优化
  * 本系统内的各个线程,就必须要知道各线程在OS层面的id.所以每个线程来调用registThrdName
@@ -89,51 +91,29 @@ inline bool appendLog_( LogLevel_e logLevel, std::string&& logBody ) {
 };*/
 inline bool appendLog( LogLevel_e logLevel, const std::string& logBody ) {
    // 只有不低于门限值的日志才能得到输出
-   if ( logLevel < g_ellLogLevel )
-      return false;
+// if ( logLevel < g_ellLogLevel )
+//    return false;
 
    return appendLog( logLevel, std::string( logBody ) );
 };
 
 #ifdef DEBUG
-// 带调试代码的编译,都会调用输出函数,输不输出由下层决定
-#define LOG_DEBUG( strLogBody )  \
-   appendLog( LogLevel_e::ellDebug, std::string( __func__ ) + "()," + ( strLogBody ) )
 
-#define LOG_INFOR( strLogBody )  \
-   appendLog( LogLevel_e::ellInfor, std::string( __func__ ) + "()," + ( strLogBody ) )
-
-#define LOG_NOTIF( strLogBody )  \
-   appendLog( LogLevel_e::ellNotif, std::string( __func__ ) + "()," + ( strLogBody ) )
-
-#define LOG_WARNN( strLogBody )  \
-   appendLog( LogLevel_e::ellWarnn, std::string( __func__ ) + "()," + ( strLogBody ) )
-
-#define LOG_ERROR( strLogBody )  \
-   appendLog( LogLevel_e::ellError, std::string( __func__ ) + "()," + ( strLogBody ) )
-
-#define LOG_FATAL( strLogBody )  \
-   appendLog( LogLevel_e::ellFatal, std::string( __func__ ) + "()," + ( strLogBody ) )
+#define LOG_DEBUG( strLogBody ) ( g_ellLogLevel <= LogLevel_e::ellDebug && appendLog( LogLevel_e::ellDebug, std::string( __func__ ) + "()," + ( strLogBody ) ) )
+#define LOG_INFOR( strLogBody ) ( g_ellLogLevel <= LogLevel_e::ellInfor && appendLog( LogLevel_e::ellInfor, std::string( __func__ ) + "()," + ( strLogBody ) ) )
+#define LOG_NOTIF( strLogBody ) ( g_ellLogLevel <= LogLevel_e::ellNotif && appendLog( LogLevel_e::ellNotif, std::string( __func__ ) + "()," + ( strLogBody ) ) )
+#define LOG_WARNN( strLogBody ) ( g_ellLogLevel <= LogLevel_e::ellWarnn && appendLog( LogLevel_e::ellWarnn, std::string( __func__ ) + "()," + ( strLogBody ) ) )
+#define LOG_ERROR( strLogBody ) ( g_ellLogLevel <= LogLevel_e::ellError && appendLog( LogLevel_e::ellError, std::string( __func__ ) + "()," + ( strLogBody ) ) )
+#define LOG_FATAL( strLogBody ) ( g_ellLogLevel <= LogLevel_e::ellFatal && appendLog( LogLevel_e::ellFatal, std::string( __func__ ) + "()," + ( strLogBody ) ) )
 
 #else
-// 不带调试代码的编译,会尽快"短路"
-#define LOG_DEBUG( strLogBody )  \
-   ( g_ellLogLevel <= LogLevel_e::ellDebug && appendLog( LogLevel_e::ellDebug, ( strLogBody ) ) )
 
-#define LOG_INFOR( strLogBody )  \
-   ( g_ellLogLevel <= LogLevel_e::ellInfor && appendLog( LogLevel_e::ellInfor, ( strLogBody ) ) )
-
-#define LOG_NOTIF( strLogBody )  \
-   ( g_ellLogLevel <= LogLevel_e::ellNotif && appendLog( LogLevel_e::ellNotif, ( strLogBody ) ) )
-
-#define LOG_WARNN( strLogBody )  \
-   ( g_ellLogLevel <= LogLevel_e::ellWarnn && appendLog( LogLevel_e::ellWarnn, ( strLogBody ) ) )
-
-#define LOG_ERROR( strLogBody )  \
-   ( g_ellLogLevel <= LogLevel_e::ellError && appendLog( LogLevel_e::ellError, ( strLogBody ) ) )
-
-#define LOG_FATAL( strLogBody )  \
-   ( g_ellLogLevel <= LogLevel_e::ellFatal && appendLog( LogLevel_e::ellFatal, ( strLogBody ) ) )
+#define LOG_DEBUG( strLogBody ) ( g_ellLogLevel <= LogLevel_e::ellDebug && appendLog( LogLevel_e::ellDebug, ( strLogBody ) ) )
+#define LOG_INFOR( strLogBody ) ( g_ellLogLevel <= LogLevel_e::ellInfor && appendLog( LogLevel_e::ellInfor, ( strLogBody ) ) )
+#define LOG_NOTIF( strLogBody ) ( g_ellLogLevel <= LogLevel_e::ellNotif && appendLog( LogLevel_e::ellNotif, ( strLogBody ) ) )
+#define LOG_WARNN( strLogBody ) ( g_ellLogLevel <= LogLevel_e::ellWarnn && appendLog( LogLevel_e::ellWarnn, ( strLogBody ) ) )
+#define LOG_ERROR( strLogBody ) ( g_ellLogLevel <= LogLevel_e::ellError && appendLog( LogLevel_e::ellError, ( strLogBody ) ) )
+#define LOG_FATAL( strLogBody ) ( g_ellLogLevel <= LogLevel_e::ellFatal && appendLog( LogLevel_e::ellFatal, ( strLogBody ) ) )
 
 #endif
 
@@ -156,26 +136,31 @@ public:
 
 template <typename T>
 inline Logger_t& operator<<( Logger_t& logger, const T& body ) {
+
    if ( logger.m_LogLevel >= g_ellLogLevel )
-      static_cast<std::ostringstream&>( logger ) << body;
-//    dynamic_cast<std::ostringstream&>( logger ) << body;
+      static_cast<std::ostringstream&>( logger ) << ( body );
+
+// 很多自定义类(包括STL内的)会重载(overloading) << 运算符,以便输出自己,所以不可能直接
+// 调用 ostream::operator<<() 的方法(以下都不好):
+//    static_cast<std::ostringstream&>( logger ).operator<<( body );
 //    dynamic_cast<std::ostringstream&>( logger ).operator<<( body );
+//    dynamic_cast<std::ostringstream&>( logger ) << body;
+//    return std::ostringstream::operator<<( body );
 
    return logger;
-//    return std::ostringstream::operator<<( body );
 };
 
 #ifdef DEBUG
-// 带调试代码的编译,都会调用输出函数,输不输出由下层决定
-#define log_debug Logger_t{LogLevel_e::ellDebug} << __func__ << "(),"
-#define log_infor Logger_t{LogLevel_e::ellInfor} << __func__ << "(),"
-#define log_notif Logger_t{LogLevel_e::ellNotif} << __func__ << "(),"
-#define log_warnn Logger_t{LogLevel_e::ellWarnn} << __func__ << "(),"
-#define log_error Logger_t{LogLevel_e::ellError} << __func__ << "(),"
-#define log_fatal Logger_t{LogLevel_e::ellFatal} << __func__ << "(),"
+
+#define log_debug g_ellLogLevel <= LogLevel_e::ellDebug && Logger_t{LogLevel_e::ellDebug} << __func__ << "(),"
+#define log_infor g_ellLogLevel <= LogLevel_e::ellInfor && Logger_t{LogLevel_e::ellInfor} << __func__ << "(),"
+#define log_notif g_ellLogLevel <= LogLevel_e::ellNotif && Logger_t{LogLevel_e::ellNotif} << __func__ << "(),"
+#define log_warnn g_ellLogLevel <= LogLevel_e::ellWarnn && Logger_t{LogLevel_e::ellWarnn} << __func__ << "(),"
+#define log_error g_ellLogLevel <= LogLevel_e::ellError && Logger_t{LogLevel_e::ellError} << __func__ << "(),"
+#define log_fatal g_ellLogLevel <= LogLevel_e::ellFatal && Logger_t{LogLevel_e::ellFatal} << __func__ << "(),"
 
 #else
-// 不带调试代码的编译,会尽快"短路"
+
 #define log_debug g_ellLogLevel <= LogLevel_e::ellDebug && Logger_t{LogLevel_e::ellDebug}
 #define log_infor g_ellLogLevel <= LogLevel_e::ellInfor && Logger_t{LogLevel_e::ellInfor}
 #define log_notif g_ellLogLevel <= LogLevel_e::ellNotif && Logger_t{LogLevel_e::ellNotif}

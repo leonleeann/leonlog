@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.0.0)
 
 set( PROJECT_VERSION_MAJOR 1 )   # 主版本
 set( PROJECT_VERSION_MINOR 3 )   # 次版本
-set( PROJECT_VERSION_PATCH 1 )   # 修订号(Bug fix)
+set( PROJECT_VERSION_PATCH 2 )   # 修订号(Bug fix)
 
 # 完整版本串
 set( PROJECT_VERSION ${PROJECT_VERSION_MAJOR}.${PROJECT_VERSION_MINOR}.${PROJECT_VERSION_PATCH} )

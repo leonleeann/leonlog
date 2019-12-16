@@ -45,7 +45,7 @@ using std::unique_ptr;
 
 namespace leon_log {
 
-// LogLevel_e g_ellLogLevel = ellDebug;
+LogLevel_e g_ellLogLevel = LogLevel_e::ellDebug;
 
 // 日志时间,用于日志时戳
 using LogTimePoint_T = time_point<system_clock, microseconds>;
@@ -53,13 +53,13 @@ using LogTimePoint_T = time_point<system_clock, microseconds>;
 // LogEntry: 定义一条日志记录所具有的基本内容
 struct LogEntry_T {
    // 日志产生时间
-   SysTimePoint_T m_tpStamp;
+   SysTimeNS_t m_tpStamp;
 
    // 日志内容
-   string         m_strBody;
+   string      m_strBody;
 
    // 日志级别
-   LogLevel_e     m_enmLevel;
+   LogLevel_e  m_enmLevel;
 };
 
 // 返回16进制串表达的线程Id
@@ -285,9 +285,10 @@ void FileLogger_t::open( const string& crp_strLogFile,
       std::min<decltype( m_uiStampPrecision )>( p_uiStampPrecesion, 9 );
    m_uiStampUnitBase  = std::pow( 10.0, 9 - m_uiStampPrecision );
 
-   g_ellLogLevel = std::min( LogLevel_e::ellFatal,
-                             std::max( LogLevel_e::ellDebug,
-                                       p_enmLogLevel ) );
+   const_cast<LogLevel_e&>( g_ellLogLevel ) = std::min(
+            LogLevel_e::ellFatal,
+            std::max( LogLevel_e::ellDebug, p_enmLogLevel ) );
+
    m_strLogFile = crp_strLogFile;
    registThrdName( "主线程" );
    m_abShouldRun = true;
@@ -387,7 +388,7 @@ void FileLogger_t::append( LogLevel_e p_enmLevel,
    if ( ! tl_upqMyLogQue->isFull() ) {
       // 正常添加本条日志,逐一赋值是为了move string对象
       pLog->m_enmLevel = p_enmLevel;
-      pLog->m_tpStamp = SysTimePoint_T::clock::now();
+      pLog->m_tpStamp = SysTimeNS_t::clock::now();
       pLog->m_strBody = std::move( rrp_strBody );
       tl_upqMyLogQue->enque();
       sem_post( & m_semNewLog );
@@ -405,7 +406,7 @@ void FileLogger_t::append( LogLevel_e p_enmLevel,
       return;
    }
    pLog->m_enmLevel = LogLevel_e::ellError;
-   pLog->m_tpStamp = SysTimePoint_T::clock::now();
+   pLog->m_tpStamp = SysTimeNS_t::clock::now();
    pLog->m_strBody = std::move( rrp_strBody );
    tl_upqMyLogQue->enque();
    sem_post( & m_semNewLog );
@@ -486,8 +487,8 @@ const char * const LOG_STAMP_FORMAT = "%m/%d %H:%M:%S";
 inline void FileLogger_t::writeLog( ofstream & p_out,
                                     const LogEntry_T & crp_log,
                                     const string& crp_strThreadName ) {
-   SysTimePoint_T tpSecPart =
-      time_point_cast<SysTimePoint_T::duration>(
+   SysTimeNS_t tpSecPart =
+      time_point_cast<SysTimeNS_t::duration>(
          std::chrono::floor<seconds>( crp_log.m_tpStamp ) );
    // 输出时戳
    p_out << formatTimeP( tpSecPart, LOG_STAMP_FORMAT );
@@ -553,7 +554,7 @@ void FileLogger_t::semLoop() {
    timespec_get( &tsNextFlush, TIME_UTC );
 
    aLog.m_enmLevel = LogLevel_e::ellNotif;
-   aLog.m_tpStamp = SysTimePoint_T::clock::now();
+   aLog.m_tpStamp = SysTimeNS_t::clock::now();
    if ( m_bRotating )
       aLog.m_strBody = "---------- 日志文件已轮转 ----------";
    else
@@ -590,14 +591,14 @@ void FileLogger_t::semLoop() {
          writeLog( ofsLogFile, aLog, *thrdName );
 
       aLog.m_enmLevel = LogLevel_e::ellNotif;
-      aLog.m_tpStamp = SysTimePoint_T::clock::now();
+      aLog.m_tpStamp = SysTimeNS_t::clock::now();
       aLog.m_strBody = "================ 日志已停止 =================";
       writeLog( ofsLogFile, aLog, "Logger" );
 //    std::cerr << aLog.m_strBody << std::endl;
 
    } else if ( m_bRotating ) {
       aLog.m_enmLevel = LogLevel_e::ellNotif;
-      aLog.m_tpStamp = SysTimePoint_T::clock::now();
+      aLog.m_tpStamp = SysTimeNS_t::clock::now();
       aLog.m_strBody = "---------- 日志文件将轮转 ----------";
       writeLog( ofsLogFile, aLog, "Logger" );
 //    std::cerr << aLog.m_strBody << std::endl;
