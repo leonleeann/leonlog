@@ -2,14 +2,14 @@ cmake_minimum_required(VERSION 3.0.0)
 
 project( test-log LANGUAGES CXX )
 
-# 静态库版
+#======== 静态版 =====================
 add_executable( test-log testLogging.cpp
-   ${LEON_CODE_BASE}/chrono/Chrono.cpp
-   ${LEON_CODE_BASE}/misc/MiscTools.cpp
+   ${OCTOPUS_CODE_BASE}/common/chrono/Chrono.cpp
+   ${OCTOPUS_CODE_BASE}/common/misc/Converts.cpp
 )
 target_link_libraries( test-log
-   leonlog
-   "stdc++fs"
    ${CMAKE_THREAD_LIBS_INIT}
+   "stdc++fs"
+   leonlog
 )
 install( TARGETS test-log RUNTIME DESTINATION testing )

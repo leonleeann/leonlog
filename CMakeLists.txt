@@ -1,46 +1,61 @@
-cmake_minimum_required(VERSION 3.0.0)
+cmake_minimum_required( VERSION 3.0.0 )
 
-include(CheckCXXCompilerFlag)
-check_cxx_compiler_flag( -Wall HAVE_WALL )
-if ( HAVE_WALL )
-# gcc 警告全开
-   set( CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall" )
-endif()
-# 采用C++标准:20
-set( CMAKE_CXX_STANDARD 20 )
+set( PROJECT_VERSION_MAJOR 1 )   # 主版本
+set( PROJECT_VERSION_MINOR 3 )   # 次版本
+set( PROJECT_VERSION_PATCH 3 )   # 修订号(Bug fix)
 
-# OPTION( BUILD_SHARED_LIBS "默认输出静态库" OFF )
+# 版本全串
+set( PROJECT_VERSION
+   ${PROJECT_VERSION_MAJOR}.${PROJECT_VERSION_MINOR}.${PROJECT_VERSION_PATCH})
 
-# 遵循GNU文件分布约定(如:库文件输出至/usr/lib之下)
-include( GNUInstallDirs )
+# 版本说明
+set( PROJECT_VERSION_NOTES "cmake重构" )
 
-# find_package( GTest REQUIRED )
-# message( STATUS "GTEST_INCLUDE_DIRS:\"${GTEST_INCLUDE_DIRS}\"" )
-# message( STATUS "GTEST_BOTH_LIBRARIES:\"${GTEST_BOTH_LIBRARIES}\"" )
-set( GTEST_INCLUDE_DIRS "/usr/local/include/gtest" )
-set( GMOCK_INCLUDE_DIRS "/usr/local/include/gmock" )
-set( GTEST_BOTH_LIBRARIES "/usr/local/lib/libgtest.a;/usr/local/lib/libgtest_main.a" )
-set( GMOCK_BOTH_LIBRARIES "/usr/local/lib/libgmock.a;/usr/local/lib/libgmock_main.a" )
+# 项目描述
+set( PROJECT_DESCRIPTION   "线程安全的异步文件日志库" )
 
-set( LEON_CODE_BASE "/home/leon/projects/octopus/common" )
-include_directories( ${LEON_CODE_BASE} )
+project( leonlog
+   VERSION     ${PROJECT_VERSION}
+   DESCRIPTION ${PROJECT_DESCRIPTION}
+   LANGUAGES CXX
+)
+set( OCTOPUS_CODE_BASE $ENV{OCTOPUS_CODE_BASE} )
+include( ${OCTOPUS_CODE_BASE}/common/OctopusCommon.cmake )
+configure_file( ${OCTOPUS_CODE_BASE}/common/misc/Version.hpp.in Version.hpp )
+set( CMAKE_INCLUDE_CURRENT_DIR ON )
 
-# 线程库基本上每个子项目都会用到,这里统一找了吧
-find_package( Threads REQUIRED )
+######## 各种库 #################################################################
+#======== obj libs =====================
+# add_library( objlib_log2file OBJECT log2file.cpp )
 
-# config++将采用静态链接, 此处不必找了
-# find_package( libconfig++ REQUIRED )
+######## 主要程序 ###############################################################
+#======== 静态版 =====================
+add_library( leonlog_static STATIC log2file.cpp )
+set_target_properties( leonlog_static PROPERTIES
+   OUTPUT_NAME_RELEASE  leonlog
+   OUTPUT_NAME_DEBUG    leonlog
+   PUBLIC_HEADER  leonlog.hpp
+   VERSION        ${PROJECT_VERSION}
+   SOVERSION      ${PROJECT_VERSION_MAJOR}
+)
+install( TARGETS leonlog_static
+   ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
+   PUBLIC_HEADER DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
+)
 
-# 根据CMAKE_BUILD_TYPE重新定义DEBUG及NDEBUG
-string( TOUPPER ${CMAKE_BUILD_TYPE} build_type_str )
-if( ( build_type_str STREQUAL "DEBUG" )
-      OR ( build_type_str STREQUAL "RELWITHDEBINFO" ) )
-   add_definitions( -DDEBUG )
-   remove_definitions( -DNDEBUG )	# 不起作用
-else( )
-   add_definitions( -DNDEBUG )
-   remove_definitions( -DDEBUG )
-endif( )
+#======== 动态版 =====================
+add_library( leonlog_shared SHARED log2file.cpp )
+set_target_properties( leonlog_shared PROPERTIES
+   OUTPUT_NAME_RELEASE  leonlog
+   OUTPUT_NAME_DEBUG    leonlog
+   PUBLIC_HEADER  leonlog.hpp
+   VERSION        ${PROJECT_VERSION}
+   SOVERSION      ${PROJECT_VERSION_MAJOR}
+)
+install( TARGETS leonlog_shared
+   ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
+   PUBLIC_HEADER DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
+)
 
-# add_subdirectory( source )
+######## 单元测试 ###############################################################
 add_subdirectory( testing )

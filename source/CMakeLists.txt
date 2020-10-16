@@ -23,21 +23,33 @@ configure_file( ${LEON_CODE_BASE}/misc/Version.hpp.in Version.hpp )
 OPTION( BUILD_SHARED_LIBS "默认输出静态库" OFF )
 
 set( CMAKE_INCLUDE_CURRENT_DIR ON )
-
-##### libleonlog.a ###########################################################
-add_library( leonlog STATIC log2file.cpp )
-
-set_target_properties( leonlog PROPERTIES
-   VERSION        ${PROJECT_VERSION}
-   SOVERSION      ${PROJECT_VERSION_MAJOR}
-   PUBLIC_HEADER  leonlog.hpp
-)
-
 message( STATUS "CMAKE_INSTALL_LIBDIR:\"${CMAKE_INSTALL_LIBDIR}\"" )
 message( STATUS "CMAKE_INSTALL_INCLUDEDIR:\"${CMAKE_INSTALL_INCLUDEDIR}\"" )
-install( TARGETS leonlog
+
+##### 静态版 ###############################################################
+add_library( leonlog_static STATIC log2file.cpp )
+set_target_properties( leonlog_static PROPERTIES
+   OUTPUT_NAME_RELEASE  leonlog
+   OUTPUT_NAME_DEBUG    leonlog
+   PUBLIC_HEADER  leonlog.hpp
+   VERSION        ${PROJECT_VERSION}
+   SOVERSION      ${PROJECT_VERSION_MAJOR}
+)
+install( TARGETS leonlog_static
    ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
    PUBLIC_HEADER DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
 )
 
-##### libleonlog.so ##########################################################
+##### 动态版 ###############################################################
+add_library( leonlog_shared SHARED log2file.cpp )
+set_target_properties( leonlog_shared PROPERTIES
+   OUTPUT_NAME_RELEASE  leonlog
+   OUTPUT_NAME_DEBUG    leonlog
+   PUBLIC_HEADER  leonlog.hpp
+   VERSION        ${PROJECT_VERSION}
+   SOVERSION      ${PROJECT_VERSION_MAJOR}
+)
+install( TARGETS leonlog_shared
+   ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
+   PUBLIC_HEADER DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
+)

@@ -19,12 +19,11 @@
 #include <thread>
 #include <unistd.h>
 
+#include "Version.hpp"
 #include "buffer/RingQueue.hpp"
 #include "chrono/Chrono.hpp"
-#include "misc/Exceptions.hpp"
-#include "misc/MiscTools.hpp"
 #include "leonlog.hpp"
-#include "Version.hpp"
+#include "misc/Exceptions.hpp"
 
 using namespace std::chrono_literals;
 using namespace std::chrono;
@@ -491,7 +490,7 @@ inline void FileLogger_t::writeLog( ofstream & p_out,
       time_point_cast<SysTimeNS_t::duration>(
          std::chrono::floor<seconds>( crp_log.m_tpStamp ) );
    // 输出时戳
-   p_out << formatTimeP( tpSecPart, LOG_STAMP_FORMAT );
+   p_out << formatTime( tpSecPart, LOG_STAMP_FORMAT );
 
    // 是否精确到秒以下
    if ( m_uiStampPrecision > 0 ) {
