@@ -1,125 +1,105 @@
 #pragma once
-#include <functional>
-#include <iostream>
-#include <map>
-#include <sstream>
-#include <string>
-#include <string_view>
-#include <utility>
+// #include <functional>
+// #include <sstream>
+// #include <string>
+// #include <string_view>
 
 namespace leon_log {
 
 enum class LogLevel_e {
    // 供跟踪、调试时使用的日志, Release编译时不会生成相应代码
-   ellDebug = 0,
+   Debug = 0,
 
    // 程序运行期间非常详尽的细节报告, 供运维期间排查问题使用
    // 如: "本次写入DB数据为...."
-   ellInfor,
+   Infor,
 
    // 程序运行期间较简洁的状态报告, "通知性"、"状态转移性"报告
    // 如: "通信连接成功"、"数据库连接成功"
-   ellNotif,
+   Notif,
 
    // "警示性"报告, 通常用于指出某些尚能容忍的异常情况, 程序尚能运行
    // 如: "通信中收到异常数据"、"函数收到异常参数等"
-   ellWarnn,
+   Warnn,
 
    // 错误报告, 指出程序已出现明显错误且无法自行恢复的状态, 但尚能"优雅地"退出
    // 如: "服务器拒绝登录"、"没有文件访问权限，无法继续"
-   ellError,
+   Error,
 
    // 失败报告, 指出程序已出现"崩溃性"错误, 将会立即崩溃
    // 如: "SegFalt"、"Abort"
-   ellFatal,
+   Fatal,
 
    // 取值计数
    VALUES_COUNT
 };
 
 constexpr std::string_view LOG_LEVEL_NAMES[] = {
-   "DEBUG", // ellDebug
-   "INFOR", // ellInfor
-   "NOTIF", // ellNotif
-   "WARNN", // ellWarnn
-   "ERROR", // ellError
-   "FATAL"  // ellFatal
+   "DEBUG", // Debug
+   "INFOR", // Infor
+   "NOTIF", // Notif
+   "WARNN", // Warnn
+   "ERROR", // Error
+   "FATAL"  // Fatal
 };
 
-extern LogLevel_e g_ellLogLevel;
+// 全系统日志级别
+extern LogLevel_e g_log_level;
 /* static 会导致多重"影子"变量,下面这些都不行!
-   static LogLevel_e g_ellLogLevel = LogLevel_e::ellDebug;
-   static const LogLevel_e g_ellLogLevel = LogLevel_e::ellDebug; */
-
-/* thread::get_id()返回的不是操作系统内真正的线程id,我们要通过OS的工具(top)监测优化
- * 本系统内的各个线程,就必须要知道各线程在OS层面的id.所以每个线程来调用registThrdName
- * 函数时,就会获取其真正id并写入下面这个map,供监控所用.
- */
-extern std::map<std::string, pid_t> g_mapOsThreadIds;
+   static LogLevel_e g_log_level = LogLevel_e::Debug;
+   static const LogLevel_e g_log_level = LogLevel_e::Debug; */
 
 // 常量定义: 单个日志队列的容量(整个系统中每个线程对应一个日志队列, 只要它添加过日志)
 // 队列再大也只是缓冲突发的日志，如果产生日志持续比消费日志快, 再大的队列也会爆...
-constexpr size_t DEFAULT_LOG_QUE_SIZE = 128;
+constexpr size_t DEFAULT_LOG_QUE_SIZE = 256;
 
 extern "C" const char* getVersion();
 
 // 指定日志文件名, 启动日志系统
 extern "C" void startLogging(
-   const std::string&   logFile,
-   LogLevel_e           logLevel = LogLevel_e::ellDebug,
-   uint64_t             timeStampPrecision = 6,
-   size_t               logQueSize = DEFAULT_LOG_QUE_SIZE );
+   const std::string&   log_file,                           // 日志文件路径及名称
+   LogLevel_e           log_levl = LogLevel_e::Debug,       // 日志级别
+   size_t               stamp_precision = 6,                // 时戳精度
+   size_t               que_size = DEFAULT_LOG_QUE_SIZE );  // 队列容量
 
 // 关闭日志, 并Flush所有日志到磁盘
 extern "C" void stopLogging();
 
-// 轮转日志文件
-extern "C" void rotateLog( const std::string& crp_strInfix );
+// 添加日志的主函数
+extern "C" bool appendLog( LogLevel_e level, const std::string& body );
 
 // 可选函数, 登记一个线程名, 此后输出该线程的日志会包含此名，而非线程Id
-extern "C" void registThrdName( const std::string& crp_strName );
+extern "C" void registThrdName( const std::string& thd_name );
 
-// 添加日志的主函数
-extern "C" bool appendLog( LogLevel_e logLevel, std::string&& logBody );
+// 设置写盘间隔(每隔多少秒确保保存一次,默认3s)
+extern "C" void setFlushSeconds( unsigned int secs );  // 单位:秒
 
-/* Linux 动态库不能支持C++函数的 overloading (参见 symbol name mangle),
- * 因此动态库能够导出的函数只能是C语言的普通函数(extern "C"),
- * 所以弄出如下的函数Wrapper
-inline bool appendLog_( LogLevel_e logLevel, std::string&& logBody ) {
-   if ( logLevel >= g_ellLogLevel )
-      appendLog( logLevel, std::move( logBody ) );
-};*/
-inline bool appendLog( LogLevel_e logLevel, const std::string& logBody ) {
-   // 只有不低于门限值的日志才能得到输出
-// if ( logLevel < g_ellLogLevel )
-//    return false;
-
-   return appendLog( logLevel, std::string( logBody ) );
-};
+// 轮转日志文件
+extern "C" void rotateLog( const std::string& infix /*中缀*/ );
 
 #ifdef DEBUG
 
-#define LOG_DEBUG( strLogBody ) ( g_ellLogLevel <= LogLevel_e::ellDebug && appendLog( LogLevel_e::ellDebug, std::string( __func__ ) + "()," + ( strLogBody ) ) )
-#define LOG_INFOR( strLogBody ) ( g_ellLogLevel <= LogLevel_e::ellInfor && appendLog( LogLevel_e::ellInfor, std::string( __func__ ) + "()," + ( strLogBody ) ) )
-#define LOG_NOTIF( strLogBody ) ( g_ellLogLevel <= LogLevel_e::ellNotif && appendLog( LogLevel_e::ellNotif, std::string( __func__ ) + "()," + ( strLogBody ) ) )
-#define LOG_WARNN( strLogBody ) ( g_ellLogLevel <= LogLevel_e::ellWarnn && appendLog( LogLevel_e::ellWarnn, std::string( __func__ ) + "()," + ( strLogBody ) ) )
-#define LOG_ERROR( strLogBody ) ( g_ellLogLevel <= LogLevel_e::ellError && appendLog( LogLevel_e::ellError, std::string( __func__ ) + "()," + ( strLogBody ) ) )
-#define LOG_FATAL( strLogBody ) ( g_ellLogLevel <= LogLevel_e::ellFatal && appendLog( LogLevel_e::ellFatal, std::string( __func__ ) + "()," + ( strLogBody ) ) )
+#define LOG_DEBUG( log_body ) ( g_log_level <= LogLevel_e::Debug && appendLog( LogLevel_e::Debug, std::string( __func__ ) + "()," + ( log_body ) ) )
+#define LOG_INFOR( log_body ) ( g_log_level <= LogLevel_e::Infor && appendLog( LogLevel_e::Infor, std::string( __func__ ) + "()," + ( log_body ) ) )
+#define LOG_NOTIF( log_body ) ( g_log_level <= LogLevel_e::Notif && appendLog( LogLevel_e::Notif, std::string( __func__ ) + "()," + ( log_body ) ) )
+#define LOG_WARNN( log_body ) ( g_log_level <= LogLevel_e::Warnn && appendLog( LogLevel_e::Warnn, std::string( __func__ ) + "()," + ( log_body ) ) )
+#define LOG_ERROR( log_body ) ( g_log_level <= LogLevel_e::Error && appendLog( LogLevel_e::Error, std::string( __func__ ) + "()," + ( log_body ) ) )
+#define LOG_FATAL( log_body ) ( g_log_level <= LogLevel_e::Fatal && appendLog( LogLevel_e::Fatal, std::string( __func__ ) + "()," + ( log_body ) ) )
 
 #else
 
-#define LOG_DEBUG( strLogBody ) ( g_ellLogLevel <= LogLevel_e::ellDebug && appendLog( LogLevel_e::ellDebug, ( strLogBody ) ) )
-#define LOG_INFOR( strLogBody ) ( g_ellLogLevel <= LogLevel_e::ellInfor && appendLog( LogLevel_e::ellInfor, ( strLogBody ) ) )
-#define LOG_NOTIF( strLogBody ) ( g_ellLogLevel <= LogLevel_e::ellNotif && appendLog( LogLevel_e::ellNotif, ( strLogBody ) ) )
-#define LOG_WARNN( strLogBody ) ( g_ellLogLevel <= LogLevel_e::ellWarnn && appendLog( LogLevel_e::ellWarnn, ( strLogBody ) ) )
-#define LOG_ERROR( strLogBody ) ( g_ellLogLevel <= LogLevel_e::ellError && appendLog( LogLevel_e::ellError, ( strLogBody ) ) )
-#define LOG_FATAL( strLogBody ) ( g_ellLogLevel <= LogLevel_e::ellFatal && appendLog( LogLevel_e::ellFatal, ( strLogBody ) ) )
+#define LOG_DEBUG( log_body ) ( g_log_level <= LogLevel_e::Debug && appendLog( LogLevel_e::Debug, ( log_body ) ) )
+#define LOG_INFOR( log_body ) ( g_log_level <= LogLevel_e::Infor && appendLog( LogLevel_e::Infor, ( log_body ) ) )
+#define LOG_NOTIF( log_body ) ( g_log_level <= LogLevel_e::Notif && appendLog( LogLevel_e::Notif, ( log_body ) ) )
+#define LOG_WARNN( log_body ) ( g_log_level <= LogLevel_e::Warnn && appendLog( LogLevel_e::Warnn, ( log_body ) ) )
+#define LOG_ERROR( log_body ) ( g_log_level <= LogLevel_e::Error && appendLog( LogLevel_e::Error, ( log_body ) ) )
+#define LOG_FATAL( log_body ) ( g_log_level <= LogLevel_e::Fatal && appendLog( LogLevel_e::Fatal, ( log_body ) ) )
 
 #endif
 
 class Logger_t : public std::ostringstream {
 public:
-   explicit Logger_t( LogLevel_e p_enmLevel ) : m_LogLevel( p_enmLevel ) {};
+   explicit Logger_t( LogLevel_e l ) : m_LogLevel( l ) {};
 
    // 释放本对象时一并输出,且本类可派生
    ~Logger_t() override {
@@ -127,7 +107,7 @@ public:
    };
 
    inline operator bool() {
-      return m_LogLevel >= g_ellLogLevel;
+      return m_LogLevel >= g_log_level;
    };
 
    // 把属性公开之后,就不需要后面那一堆友元函数了.关键是,用户自定义类型也可流式输出了!
@@ -137,7 +117,7 @@ public:
 template <typename T>
 inline Logger_t& operator<<( Logger_t& logger, const T& body ) {
 
-   if ( logger.m_LogLevel >= g_ellLogLevel )
+   if( logger.m_LogLevel >= g_log_level )
       static_cast<std::ostringstream&>( logger ) << ( body );
 
 // 很多自定义类(包括STL内的)会重载(overloading) << 运算符,以便输出自己,所以不可能直接
@@ -152,21 +132,21 @@ inline Logger_t& operator<<( Logger_t& logger, const T& body ) {
 
 #ifdef DEBUG
 
-#define log_debug g_ellLogLevel <= LogLevel_e::ellDebug && Logger_t{LogLevel_e::ellDebug} << __func__ << "(),"
-#define log_infor g_ellLogLevel <= LogLevel_e::ellInfor && Logger_t{LogLevel_e::ellInfor} << __func__ << "(),"
-#define log_notif g_ellLogLevel <= LogLevel_e::ellNotif && Logger_t{LogLevel_e::ellNotif} << __func__ << "(),"
-#define log_warnn g_ellLogLevel <= LogLevel_e::ellWarnn && Logger_t{LogLevel_e::ellWarnn} << __func__ << "(),"
-#define log_error g_ellLogLevel <= LogLevel_e::ellError && Logger_t{LogLevel_e::ellError} << __func__ << "(),"
-#define log_fatal g_ellLogLevel <= LogLevel_e::ellFatal && Logger_t{LogLevel_e::ellFatal} << __func__ << "(),"
+#define log_debug g_log_level <= LogLevel_e::Debug && Logger_t(LogLevel_e::Debug) << __func__ << "(),"
+#define log_infor g_log_level <= LogLevel_e::Infor && Logger_t(LogLevel_e::Infor) << __func__ << "(),"
+#define log_notif g_log_level <= LogLevel_e::Notif && Logger_t(LogLevel_e::Notif) << __func__ << "(),"
+#define log_warnn g_log_level <= LogLevel_e::Warnn && Logger_t(LogLevel_e::Warnn) << __func__ << "(),"
+#define log_error g_log_level <= LogLevel_e::Error && Logger_t(LogLevel_e::Error) << __func__ << "(),"
+#define log_fatal g_log_level <= LogLevel_e::Fatal && Logger_t(LogLevel_e::Fatal) << __func__ << "(),"
 
 #else
 
-#define log_debug g_ellLogLevel <= LogLevel_e::ellDebug && Logger_t{LogLevel_e::ellDebug}
-#define log_infor g_ellLogLevel <= LogLevel_e::ellInfor && Logger_t{LogLevel_e::ellInfor}
-#define log_notif g_ellLogLevel <= LogLevel_e::ellNotif && Logger_t{LogLevel_e::ellNotif}
-#define log_warnn g_ellLogLevel <= LogLevel_e::ellWarnn && Logger_t{LogLevel_e::ellWarnn}
-#define log_error g_ellLogLevel <= LogLevel_e::ellError && Logger_t{LogLevel_e::ellError}
-#define log_fatal g_ellLogLevel <= LogLevel_e::ellFatal && Logger_t{LogLevel_e::ellFatal}
+#define log_debug g_log_level <= LogLevel_e::Debug && Logger_t(LogLevel_e::Debug)
+#define log_infor g_log_level <= LogLevel_e::Infor && Logger_t(LogLevel_e::Infor)
+#define log_notif g_log_level <= LogLevel_e::Notif && Logger_t(LogLevel_e::Notif)
+#define log_warnn g_log_level <= LogLevel_e::Warnn && Logger_t(LogLevel_e::Warnn)
+#define log_error g_log_level <= LogLevel_e::Error && Logger_t(LogLevel_e::Error)
+#define log_fatal g_log_level <= LogLevel_e::Fatal && Logger_t(LogLevel_e::Fatal)
 
 #endif
 

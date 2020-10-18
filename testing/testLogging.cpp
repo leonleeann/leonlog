@@ -1,4 +1,8 @@
+#include <atomic>
 #include <chrono>
+#include <cstdlib>
+#include <exception>
+#include <filesystem>
 #include <iomanip>
 #include <iostream>
 #include <leonlog>
@@ -7,15 +11,27 @@
 #include <thread>
 #include <vector>
 
-#include "misc/LifeCycleWatcher.hpp"
+#include "misc/Converts.hpp"
+// #include "misc/LifeCycleWatcher.hpp"
 
-using namespace std;
-using namespace std::chrono;
+using namespace leon_ext;
 using namespace leon_log;
+using namespace std::chrono;
+using namespace std;
 
-uint64_t       g_uiThrds = 8;
-uint64_t       g_uiInterval = 1024;
-uint64_t       g_uiLasting = 32;
+// 解析命令行参数
+void parseAppOptions( int arg_count, const char* const* const args );
+// 显示用法后退出
+void showUsageAndExit();
+
+string   g_app_name;
+uint64_t g_stamp_p = 6;
+uint64_t g_threads = 2;
+uint64_t g_intervl = 100000;
+uint64_t g_lasting = 10;
+uint64_t g_quesize = 1024;
+atomic_bool g_should_run = { true };
+std::vector<thread> makers;
 
 void threadBody( uint64_t p_uiMyId ) {
    string myName = string( "线程" ) + to_string( p_uiMyId );
@@ -23,81 +39,49 @@ void threadBody( uint64_t p_uiMyId ) {
    string_view sv { myName.c_str() };
 
    uint64_t j = 0;
-   for ( ; j < g_uiInterval; ++j ) {
-//    Logger_t ll( LogLevel_e::ellDebug );
+   try {
+      while( g_should_run.load( std::memory_order::acquire ) ) {
+//       Logger_t ll( LogLevel_e::Debug );
 //       ll << j;
 
-//    ( Logger_t().setlevel( ellInfor ) << __func__ << "()," ) << j;
-      log_fatal << sv << ":" << j;
+//       ( Logger_t().setlevel( ellInfor ) << __func__ << "()," ) << j;
+         log_fatal << sv << ":" << j++;
 
-//    LOG_INFOR( "子线程日志..." + to_string( j ) );
-      this_thread::sleep_for( nanoseconds( g_uiLasting ) );
+//       LOG_INFOR( "子线程日志..." + to_string( j ) );
+         this_thread::sleep_for( nanoseconds( g_intervl ) );
+      }
+      
+   } catch( const std::exception& e ) {
+//    } catch ( ... ) {
+      cerr << myName << "遭遇异常:" << e.what();
    }
-
 //   LOG_INFOR( myName + "总共循环:" + to_string( j ) );
    log_infor << myName << "总共循环:" << j;
 };
 
-using StrMap_t = map<string, string>;
-StrMap_t mss { { "k0", "v0" }, { "k1", "v1" } };
+int main( int argc, char** argv ) {
+   g_app_name = argv[0];
+   parseAppOptions( argc, argv );
+   cout << "\n日志库版本:" << leon_log::getVersion()
+        << "\n日志级别:" << LOG_LEVEL_NAMES[static_cast<int>( g_log_level )]
+        << "\n时戳精度:" << g_stamp_p << "位"
+        << "\n线程数量:" << g_threads
+        << "\n生产间隔:" << g_intervl << "ns"
+        << "\n持续时间:" << g_lasting << "s"
+        << "\n队列长度:" << g_quesize << endl;
 
-ostream& operator<<( ostream& os, const StrMap_t& mss ) {
-//    cout << "ostream& operator<<()被调用" << endl;
-   for ( const auto& [k, v] : mss )
-      os << '{' << k << ':' << v << '}';
+   startLogging( g_app_name + ".log", LogLevel_e::Debug, g_stamp_p, g_quesize );
 
-   return os;
-};
-ostringstream& operator<<( ostringstream& os, const StrMap_t& mss ) {
-   cout << "ostringstream& operator<<()被调用" << endl;
-   return os;
-};
-Logger_t& operator<<( Logger_t& os, const StrMap_t* mss ) {
-   cout << "Logger_t& operator<<()被调用" << endl;
-   return os;
-};
+   for( uint64_t k = 0; k < g_threads; ++k )
+      makers.emplace_back( thread( threadBody, k ) );
+   
+   std::this_thread::sleep_for( seconds( g_lasting ) );
 
-int main( int argc, char ** argv ) {
-   cout << "日志库版本:" << leon_log::getVersion() << endl;
-
-   size_t     uiLogQueSize = 1024;
-   LogLevel_e ll = LogLevel_e::ellDebug;
-   // 日志级别
-   if ( argc > 1 )
-      ll = static_cast<LogLevel_e>( atoi( argv[1] ) );
-   const_cast<LogLevel_e&>( g_ellLogLevel ) = std::min(
-            std::max( ll, LogLevel_e::ellDebug ),
-            LogLevel_e::ellFatal );
-
-   // 并发线程数
-   if ( argc > 2 )
-      g_uiThrds = atoi( argv[2] );
-
-   // 每线程产生多少条日志
-   if ( argc > 3 )
-      g_uiInterval = atoi( argv[3] );
-
-   // 日志队列容量
-   if ( argc > 4 )
-      uiLogQueSize = atoi( argv[4] );
-
-   // 同一线程内产生两条日志间,间隔的纳秒数
-   if ( argc > 5 )
-      g_uiLasting = atoi( argv[5] );
-
-   cout << "日志级别:" << LOG_LEVEL_NAMES[( int )g_ellLogLevel] << endl;
-
-   startLogging( "testLogging.log", g_ellLogLevel, 3, uiLogQueSize );
-   string str1 { "str1" };
-   ostringstream oss;
-
+   g_should_run.store( false, std::memory_order::release );
+   for( auto& mkr : makers )
+      mkr.join();
+   
    /*
-      std::vector<thread> thrds;
-      uint64_t k = 0;
-      for ( ; k < g_uiThrds; ++k ) {
-         thrds.push_back( thread( threadBody, k ) );
-      }
-
       LifeCycleWatcher_t lcw { "lcw000" };
       log_debug << "一条调试日志" + lcw;
       LOG_DEBUG( "一条调试日志" + lcw );
@@ -132,11 +116,78 @@ int main( int argc, char ** argv ) {
 //    cout << mss;
 //    log_debug << &mss;
 //    oss << mss;
-   Logger_t lg { LogLevel_e::ellFatal };
+//    Logger_t lg { LogLevel_e::Fatal };
 //    dynamic_cast<ostream&>( lg ) << mss;
 //    dynamic_cast<Logger_t&>( lg ) << mss;
-   lg << &mss;
+//    lg << &mss;
 
+   cerr << "==============准备停止日志系统==============" << endl;
+   cout << "==============准备停止日志系统==============" << endl;
+   cerr << "==============准备停止日志系统==============" << endl;
+   cout << "==============准备停止日志系统==============" << endl;
+   cerr << "==============准备停止日志系统==============" << endl;
+   cout << "==============准备停止日志系统==============" << endl;
    stopLogging();
    return EXIT_SUCCESS;
+};
+
+void parseAppOptions( int argc, const char* const* const args ) {
+   for( int i = 1; i < argc; ++i ) {
+      string val = trim( args[i] );
+//================ 一般选项 =====================================================
+      if( val == "-H" || val == "--help" ) {
+         showUsageAndExit();
+
+//================ 本应用选项 ===================================================
+      } else if( val == "-P" || val == "--stamp-p" ) {
+         if( ++i >= argc ) {
+            cerr << "-P(--stamp-p)选项后面需要数量,无法继续!" << endl;
+            showUsageAndExit();
+         }
+         g_stamp_p = atoi( args[i] );
+      } else if( val == "-T" || val == "--threads" ) {
+         if( ++i >= argc ) {
+            cerr << "-T(--threads)选项后面需要数量,无法继续!" << endl;
+            showUsageAndExit();
+         }
+         g_threads = atoi( args[i] );
+      } else if( val == "-I" || val == "--intervl" ) {
+         if( ++i >= argc ) {
+            cerr << "-I(--intervl)选项后面需要数量,无法继续!" << endl;
+            showUsageAndExit();
+         }
+         g_intervl = atoi( args[i] );
+      } else if( val == "-L" || val == "--lasting" ) {
+         if( ++i >= argc ) {
+            cerr << "-L(--lasting)选项后面需要数量,无法继续!" << endl;
+            showUsageAndExit();
+         }
+         g_lasting = atoi( args[i] );
+      } else if( val == "-Q" || val == "--quesize" ) {
+         if( ++i >= argc ) {
+            cerr << "-Q(--quesize)选项后面需要数量,无法继续!" << endl;
+            showUsageAndExit();
+         }
+         g_quesize = atoi( args[i] );
+
+//================= 未知选项 ====================================================
+      } else {
+         cerr << '"' << val << "\" 是无法识别的选项,无法继续!" << endl;
+         showUsageAndExit();
+      }
+   };
+};
+
+void showUsageAndExit() {
+   cerr << "目的: 测试 leonlog 日志库"
+        << "\n用法0: " << g_app_name
+        << "\n\t-H(--help)  : 显示用法后退出"
+        << "\n用法1: " << g_app_name
+        << "\n\t-P (--stamp-p) <时戳精度,6>"
+        << "\n\t-Q (--quesize) <日志队列长度,1024>"
+        << "\n\t-T (--threads) <并发产生日志的线程数量,2>"
+        << "\n\t-I (--intervl) <产生日志的间隔纳秒数,100000ns>"
+        << "\n\t-L (--lasting) <测试持续秒数,10s>"
+        << endl;
+   exit( EXIT_FAILURE );
 };

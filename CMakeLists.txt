@@ -1,15 +1,15 @@
 cmake_minimum_required( VERSION 3.0.0 )
 
 set( PROJECT_VERSION_MAJOR 1 )   # 主版本
-set( PROJECT_VERSION_MINOR 3 )   # 次版本
-set( PROJECT_VERSION_PATCH 3 )   # 修订号(Bug fix)
+set( PROJECT_VERSION_MINOR 4 )   # 次版本
+set( PROJECT_VERSION_PATCH 0 )   # 修订号(Bug fix)
 
 # 版本全串
 set( PROJECT_VERSION
    ${PROJECT_VERSION_MAJOR}.${PROJECT_VERSION_MINOR}.${PROJECT_VERSION_PATCH})
 
 # 版本说明
-set( PROJECT_VERSION_NOTES "cmake重构" )
+set( PROJECT_VERSION_NOTES "消息队列改用CraflinRQ" )
 
 # 项目描述
 set( PROJECT_DESCRIPTION   "线程安全的异步文件日志库" )
