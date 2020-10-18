@@ -80,7 +80,8 @@ constexpr auto release = std::memory_order_release;
 // constexpr auto seq_cst = std::memory_order_seq_cst;
 
 // 日志入队重试次数
-constexpr int ENQUE_RETRIES = 10;
+constexpr unsigned int ENQUE_RETRIES = 10;
+constexpr unsigned int CHECK_INTERVL = 128;
 
 //###### 各种函数前置申明 #########################################################
 
@@ -103,8 +104,11 @@ void renameLogFile();
 
 // 日志级别
 LogLevel_e  g_log_level = LogLevel_e::Debug;
+
 // 写盘间隔(每隔多少秒确保保存一次)
-decltype( timespec::tv_sec ) g_flush_secs = 3;  // 单位:秒
+decltype( timespec::tv_sec ) s_flush_secs = 3;  // 单位:秒
+// 干掉日志线程之前等待多少秒
+unsigned int s_exit_secs = 1;  // 单位:秒
 // 时戳精度(0~9代表精确到秒的几位小数)
 size_t      s_stamp_pre = 6;
 // 时戳单位(为了截断时戳到指定精度,每次要用的除数)
@@ -182,22 +186,24 @@ extern "C" void stopLogging() {
 
    LOG_NOTIF( "将要停止日志系统......" );
    s_should_run.store( false, release );
-   steady_clock::time_point time_out = steady_clock::now() + 1s;
+   steady_clock::time_point time_out =
+      steady_clock::now() + seconds( s_exit_secs );
    while( s_is_running.load( acquire ) && steady_clock::now() < time_out ) {
       // 为避免 s_writer 苦等信号量而不能退出, 多给它发点
       sem_post( &s_new_log );
-      std::this_thread::sleep_for( 1ns );
+      std::this_thread::sleep_for( 1ms );
    }
 
-// sleep_for( 15s );
-// s_writer.join();
+/* 如果日志线程还在运行,就强制把它杀了
    if( s_is_running.load( acquire ) ) {
-      //s_writer.detach();
-//       s_writer.std::thread::~thread();
-      // throw std::runtime_error( "日志系统停止失败" );
-   } else {
-      s_writer.join();
+      cerr << "队内日志太多(" << s_log_que->size()
+           << "),写不完了.杀掉writer!" << endl;
+      pthread_cancel( s_writer.native_handle() );
+      sleep_for( 1s );
    }
+*/
+//    cerr << "joinning writer..." << endl;
+   s_writer.join();
    if( sem_destroy( &s_new_log ) )
       throw std::runtime_error( "信号量销毁失败!" );
 };
@@ -241,19 +247,24 @@ extern "C" void registThrdName( const string& thd_name ) {
 
 // 设置写盘间隔(每隔多少秒确保保存一次,默认3s)
 extern "C" void setFlushSeconds( unsigned int secs ) {
-   g_flush_secs = secs;
+   s_flush_secs = secs;
+};
+
+// 设置退出等待时长(给日志线程多少时间清盘,默认1s)
+extern "C" void setExitSeconds( unsigned int secs ) {
+   s_exit_secs = secs;
 };
 
 extern "C" void rotateLog( const string& infix ) {
 // 本函数不是直接改名日志文件,只是置位全局变量,由日志线程完成真正的改名
-   
+
 // 先确保日志线程真的进入事件循环,否则它首次进入事件循环就会去轮转日志
    steady_clock::time_point time_out = steady_clock::now() + 100ms;
    while( !s_is_running.load( acquire ) && steady_clock::now() < time_out )
       std::this_thread::sleep_for( 1ms );
    if( !s_is_running.load( acquire ) )
       throw bad_usage( "日志系统尚未启动, 怎么轮转?" );
-   
+
    s_log_infix = infix;
    s_is_rolling.store( true, release );
    sem_post( &s_new_log );
@@ -268,6 +279,13 @@ extern "C" void rotateLog( const string& infix ) {
 };
 
 void writerThreadBody() {
+   /* 如果本系统已被海量的日志淹没,日志线程会需要很久才能写完退出(尤其是日志队列用得很大时),
+    * 导致本系统停止失败。 所以日志线程设置为可以立即终止。
+   int old_state = 0, old_type = 0;
+   pthread_setcanceltype( PTHREAD_CANCEL_ASYNCHRONOUS, &old_type );
+   pthread_setcancelstate( PTHREAD_CANCEL_ENABLE, &old_state );
+    */
+
    // 日志线程自己也可以添加日志,当然就也可以注册有意义的线程名称
    registThrdName( "Logger" );
 
@@ -290,7 +308,7 @@ void processLogs() {
    // 每过1秒Flush一下, 所以需要记录时间
    timespec tsNextFlush, tsNow;
    timespec_get( &tsNextFlush, TIME_UTC );
-   tsNextFlush.tv_sec += g_flush_secs;
+   tsNextFlush.tv_sec += s_flush_secs;
 
    LogEntry_t aLog { SysTimeNS_t::clock::now(), "Logger", {}, LogLevel_e::Notif, };
    // LogEntry_t aLog; aLog.stamp  = SysTimeNS_t::clock::now(); aLog.thrd   = "Logger"; aLog.level  = LogLevel_e::Notif;
@@ -305,28 +323,44 @@ void processLogs() {
    s_is_running.store( true, release );
 
    // 主循环, 等待日志->写日志->判断是否需要轮转或退出, 周而复始...
+//    bool s_run = true;
    while( s_should_run.load( acquire ) && !s_is_rolling.load( acquire ) ) {
-
       // 等一个信号
       sem_timedwait( &s_new_log, &tsNextFlush );
 
-      // 有日志就写日志
-      while( s_log_que->deque( aLog ) )
+      // 每写128条日志,看看是不是需要退出了
+      auto cc = CHECK_INTERVL;
+      while( s_log_que->deque( aLog ) ) {
          writeLog( ofsLogFile, aLog );
+         if( --cc == 0 ) {
+            if( s_should_run.load( acquire ) && !s_is_rolling.load( acquire ) )
+               cc = CHECK_INTERVL;
+            else
+               break;
+         }
+      }
 
       // 每1秒Flush一下
       timespec_get( &tsNow, TIME_UTC );
       if( tsNow > tsNextFlush ) {
          ofsLogFile.flush();
          tsNextFlush = tsNow;
-         tsNextFlush.tv_sec += g_flush_secs;
+         tsNextFlush.tv_sec += s_flush_secs;
       }
    }
 
-   if( !s_should_run.load( acquire ) ) {
-      // 开始清盘. 当然, 如果日志还在源源不断地入队, 有可能导致我们停不下来哦!
-      // 所以主线程应该确保所有其它线程均已停止或者至少不会再添加日志, 而后才停止我们.
-      while( s_log_que->size() > 0 )
+   if( s_is_rolling.load( acquire ) ) {
+      // 这是需要轮转日志
+      aLog.level = LogLevel_e::Notif;
+      aLog.thrd = "Logger";
+      aLog.stamp = SysTimeNS_t::clock::now();
+      aLog.body = "---------- 日志文件将轮转 ----------";
+      writeLog( ofsLogFile, aLog );
+   } else {
+      // 开始清盘, 如果此时日志还在源源不断地入队, 就会导致我们停不下来!
+      // 所以这里只继续保存128条日志,然后无条件退出.
+      auto cc = CHECK_INTERVL;
+      while( --cc > 0 && s_log_que->size() > 0 )
          if( s_log_que->deque( aLog ) )
             writeLog( ofsLogFile, aLog );
 
@@ -334,13 +368,6 @@ void processLogs() {
       aLog.thrd = "Logger";
       aLog.stamp = SysTimeNS_t::clock::now();
       aLog.body = "================ 日志已停止 =================";
-      writeLog( ofsLogFile, aLog );
-
-   } else if( s_is_rolling.load( acquire ) ) {
-      aLog.level = LogLevel_e::Notif;
-      aLog.thrd = "Logger";
-      aLog.stamp = SysTimeNS_t::clock::now();
-      aLog.body = "---------- 日志文件将轮转 ----------";
       writeLog( ofsLogFile, aLog );
    }
 

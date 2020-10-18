@@ -74,6 +74,9 @@ extern "C" void registThrdName( const std::string& thd_name );
 // 设置写盘间隔(每隔多少秒确保保存一次,默认3s)
 extern "C" void setFlushSeconds( unsigned int secs );  // 单位:秒
 
+// 设置退出等待时长(给日志线程多少时间清盘,默认1s)
+extern "C" void setExitSeconds( unsigned int secs );  // 单位:秒
+
 // 轮转日志文件
 extern "C" void rotateLog( const std::string& infix /*中缀*/ );
 
