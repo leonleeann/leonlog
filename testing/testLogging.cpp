@@ -45,12 +45,12 @@ void threadBody( uint64_t p_uiMyId ) {
 //       ll << j;
 
 //       ( Logger_t().setlevel( ellInfor ) << __func__ << "()," ) << j;
-         log_fatal << sv << ":" << j++;
+         log_error << sv << ":" << j++;
 
 //       LOG_INFOR( "子线程日志..." + to_string( j ) );
          this_thread::sleep_for( nanoseconds( g_intervl ) );
       }
-      
+
    } catch( const std::exception& e ) {
 //    } catch ( ... ) {
       cerr << myName << "遭遇异常:" << e.what();
@@ -70,17 +70,17 @@ int main( int argc, char** argv ) {
         << "\n持续时间:" << g_lasting << "s"
         << "\n队列长度:" << g_quesize << endl;
 
-   startLogging( g_app_name + ".log", LogLevel_e::Debug, g_stamp_p, g_quesize );
+   startLogging( g_app_name + ".log", LogLevel_e::Error, g_stamp_p, g_quesize );
 
    for( uint64_t k = 0; k < g_threads; ++k )
       makers.emplace_back( thread( threadBody, k ) );
-   
+
    std::this_thread::sleep_for( seconds( g_lasting ) );
 
    g_should_run.store( false, std::memory_order::release );
    for( auto& mkr : makers )
       mkr.join();
-   
+
    /*
       LifeCycleWatcher_t lcw { "lcw000" };
       log_debug << "一条调试日志" + lcw;
@@ -121,13 +121,13 @@ int main( int argc, char** argv ) {
 //    dynamic_cast<Logger_t&>( lg ) << mss;
 //    lg << &mss;
 
-   cerr << "==============准备停止日志系统==============" << endl;
-   cout << "==============准备停止日志系统==============" << endl;
-   cerr << "==============准备停止日志系统==============" << endl;
-   cout << "==============准备停止日志系统==============" << endl;
-   cerr << "==============准备停止日志系统==============" << endl;
-   cout << "==============准备停止日志系统==============" << endl;
+//    cerr << "==============准备停止日志系统==============" << endl;
+//    cout << "==============准备停止日志系统==============" << endl;
+//    cerr << "==============准备停止日志系统==============" << endl;
+//    cout << "==============准备停止日志系统==============" << endl;
+//    cerr << "==============准备停止日志系统==============" << endl;
    stopLogging();
+   cout << "系统正常退出." << endl;
    return EXIT_SUCCESS;
 };
 

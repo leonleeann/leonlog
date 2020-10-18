@@ -81,7 +81,7 @@ constexpr auto release = std::memory_order_release;
 
 // 日志入队重试次数
 constexpr unsigned int ENQUE_RETRIES = 10;
-constexpr unsigned int CHECK_INTERVL = 128;
+// constexpr unsigned int CHECK_INTERVL = 128;
 
 //###### 各种函数前置申明 #########################################################
 
@@ -191,19 +191,21 @@ extern "C" void stopLogging() {
    while( s_is_running.load( acquire ) && steady_clock::now() < time_out ) {
       // 为避免 s_writer 苦等信号量而不能退出, 多给它发点
       sem_post( &s_new_log );
-      std::this_thread::sleep_for( 1ms );
+      std::this_thread::sleep_for( 1us );
    }
 
-/* 如果日志线程还在运行,就强制把它杀了
+// 如果日志线程还在运行,就强制把它杀了
    if( s_is_running.load( acquire ) ) {
-      cerr << "队内日志太多(" << s_log_que->size()
-           << "),写不完了.杀掉writer!" << endl;
+      cerr << "====队内日志太多(" << s_log_que->size()
+           << "),写不完了.将要杀掉日志线程...====" << endl;
       pthread_cancel( s_writer.native_handle() );
-      sleep_for( 1s );
-   }
-*/
+      s_writer.detach();
+      cerr << "====日志线程已杀!!!====" << endl;
+   } else {
 //    cerr << "joinning writer..." << endl;
-   s_writer.join();
+      s_writer.join();
+   }
+
    if( sem_destroy( &s_new_log ) )
       throw std::runtime_error( "信号量销毁失败!" );
 };
@@ -323,22 +325,12 @@ void processLogs() {
    s_is_running.store( true, release );
 
    // 主循环, 等待日志->写日志->判断是否需要轮转或退出, 周而复始...
-//    bool s_run = true;
    while( s_should_run.load( acquire ) && !s_is_rolling.load( acquire ) ) {
       // 等一个信号
       sem_timedwait( &s_new_log, &tsNextFlush );
 
-      // 每写128条日志,看看是不是需要退出了
-      auto cc = CHECK_INTERVL;
-      while( s_log_que->deque( aLog ) ) {
+      while( s_log_que->deque( aLog ) )
          writeLog( ofsLogFile, aLog );
-         if( --cc == 0 ) {
-            if( s_should_run.load( acquire ) && !s_is_rolling.load( acquire ) )
-               cc = CHECK_INTERVL;
-            else
-               break;
-         }
-      }
 
       // 每1秒Flush一下
       timespec_get( &tsNow, TIME_UTC );
@@ -358,9 +350,8 @@ void processLogs() {
       writeLog( ofsLogFile, aLog );
    } else {
       // 开始清盘, 如果此时日志还在源源不断地入队, 就会导致我们停不下来!
-      // 所以这里只继续保存128条日志,然后无条件退出.
-      auto cc = CHECK_INTERVL;
-      while( --cc > 0 && s_log_que->size() > 0 )
+      // 所以在 stopLogging 函数内会杀掉本线程!
+      while( s_log_que->size() > 0 )
          if( s_log_que->deque( aLog ) )
             writeLog( ofsLogFile, aLog );
 
