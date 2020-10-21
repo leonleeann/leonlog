@@ -199,12 +199,14 @@ extern "C" void stopLogging() {
       cerr << "====队内日志太多(" << s_log_que->size()
            << "),写不完了.将要杀掉日志线程...====" << endl;
       pthread_cancel( s_writer.native_handle() );
-      s_writer.detach();
+      //s_writer.detach();
       cerr << "====日志线程已杀!!!====" << endl;
-   } else {
-//    cerr << "joinning writer..." << endl;
-      s_writer.join();
    }
+   
+#ifdef DEBUG
+   cerr << "joinning writer..." << endl;
+#endif
+   s_writer.join();
 
    if( sem_destroy( &s_new_log ) )
       throw std::runtime_error( "信号量销毁失败!" );

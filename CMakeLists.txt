@@ -2,14 +2,14 @@ cmake_minimum_required( VERSION 3.0.0 )
 
 set( PROJECT_VERSION_MAJOR 1 )   # 主版本
 set( PROJECT_VERSION_MINOR 4 )   # 次版本
-set( PROJECT_VERSION_PATCH 2 )   # 修订号(Bug fix)
+set( PROJECT_VERSION_PATCH 3 )   # 修订号(Bug fix)
 
 # 版本全串
 set( PROJECT_VERSION
    ${PROJECT_VERSION_MAJOR}.${PROJECT_VERSION_MINOR}.${PROJECT_VERSION_PATCH})
 
 # 版本说明
-set( PROJECT_VERSION_NOTES "用直接杀线程的方法来从洪水日志中停止" )
+set( PROJECT_VERSION_NOTES "即使杀了日志线程还是要join它" )
 
 # 项目描述
 set( PROJECT_DESCRIPTION   "线程安全的异步文件日志库" )
