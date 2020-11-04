@@ -17,7 +17,7 @@ add_library( objlib_testLogging OBJECT
 #======== 静态版 =====================
 add_executable( s-log $<TARGET_OBJECTS:objlib_testLogging> )
 target_link_libraries( s-log
-   ${CMAKE_THREAD_LIBS_INIT}
+   Threads::Threads
    "stdc++fs"
    leonlog_s
 #    leonlog_static
@@ -27,7 +27,7 @@ install( TARGETS s-log RUNTIME DESTINATION testing )
 #======== 动态版 =====================
 add_executable( d-log $<TARGET_OBJECTS:objlib_testLogging> )
 target_link_libraries( d-log
-   ${CMAKE_THREAD_LIBS_INIT}
+   Threads::Threads
    "stdc++fs"
    leonlog_d
 )

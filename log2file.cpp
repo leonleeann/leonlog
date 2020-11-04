@@ -72,12 +72,12 @@ using LogQue_t = leon_ext::CraflinRQ_t<LogEntry_t>;
 
 //###### 各种常量 ###############################################################
 
-// constexpr auto acq_rel = std::memory_order_acq_rel;
-constexpr auto acquire = std::memory_order_acquire;
-// constexpr auto consume = std::memory_order_consume;
-// constexpr auto relaxed = std::memory_order_relaxed;
-constexpr auto release = std::memory_order_release;
-// constexpr auto seq_cst = std::memory_order_seq_cst;
+// constexpr auto mo_acq_rel = std::memory_order_acq_rel;
+constexpr auto mo_acquire = std::memory_order_acquire;
+// constexpr auto mo_consume = std::memory_order_consume;
+// constexpr auto mo_relaxed = std::memory_order_relaxed;
+constexpr auto mo_release = std::memory_order_release;
+// constexpr auto mo_seq_cst = std::memory_order_seq_cst;
 
 // 日志入队重试次数
 constexpr unsigned int ENQUE_RETRIES = 10;
@@ -154,7 +154,7 @@ extern "C" void startLogging( const string& log_file,
                               LogLevel_e    log_level,
                               size_t        t_precesion,
                               size_t        q_capacity ) {
-   if( s_is_running.load( acquire ) )
+   if( s_is_running.load( mo_acquire ) )
       throw bad_usage( "日志系统已启动, 不能重复初始化!" );
 
    const_cast<LogLevel_e&>( g_log_level ) =
@@ -167,35 +167,35 @@ extern "C" void startLogging( const string& log_file,
       throw std::runtime_error( "信号量创建失败, 不能启动日志系统!" );
 
    registThrdName( "主线程" );
-   s_should_run.store( true, release );
+   s_should_run.store( true, mo_release );
    s_writer = std::thread( writerThreadBody );
    steady_clock::time_point time_out = steady_clock::now() + 1s;
-   while( !s_is_running.load( acquire ) && steady_clock::now() < time_out )
+   while( !s_is_running.load( mo_acquire ) && steady_clock::now() < time_out )
       std::this_thread::sleep_for( 1ns );
    // 如果日志线程启动成功, s_is_running 应该已置位了
-   if( !s_is_running.load( acquire ) ) {
-      s_should_run.store( false, release );
+   if( !s_is_running.load( mo_acquire ) ) {
+      s_should_run.store( false, mo_release );
       s_writer.detach();
       throw std::runtime_error( "日志系统启动失败" );
    }
 };
 
 extern "C" void stopLogging() {
-   if( !s_is_running.load( acquire ) )
+   if( !s_is_running.load( mo_acquire ) )
       throw bad_usage( "日志系统尚未启动, 怎么关闭?" );
 
    LOG_NOTIF( "将要停止日志系统......" );
-   s_should_run.store( false, release );
+   s_should_run.store( false, mo_release );
    steady_clock::time_point time_out =
       steady_clock::now() + seconds( s_exit_secs );
-   while( s_is_running.load( acquire ) && steady_clock::now() < time_out ) {
+   while( s_is_running.load( mo_acquire ) && steady_clock::now() < time_out ) {
       // 为避免 s_writer 苦等信号量而不能退出, 多给它发点
       sem_post( &s_new_log );
       std::this_thread::sleep_for( 1us );
    }
 
 // 如果日志线程还在运行,就强制把它杀了
-   if( s_is_running.load( acquire ) ) {
+   if( s_is_running.load( mo_acquire ) ) {
       cerr << "====队内日志太多(" << s_log_que->size()
            << "),写不完了.将要杀掉日志线程...====" << endl;
       pthread_cancel( s_writer.native_handle() );
@@ -220,7 +220,7 @@ extern "C" bool appendLog( LogLevel_e level, const string& body ) {
       return false;
 
    // 日志系统必须已经启动
-   if( !s_is_running.load( acquire ) ) {
+   if( !s_is_running.load( mo_acquire ) ) {
       cerr << LOG_LEVEL_NAMES[static_cast<int>( level )]
            << ",早期日志," << body << "\n";
       return true;
@@ -264,19 +264,19 @@ extern "C" void rotateLog( const string& infix ) {
 
 // 先确保日志线程真的进入事件循环,否则它首次进入事件循环就会去轮转日志
    steady_clock::time_point time_out = steady_clock::now() + 100ms;
-   while( !s_is_running.load( acquire ) && steady_clock::now() < time_out )
+   while( !s_is_running.load( mo_acquire ) && steady_clock::now() < time_out )
       std::this_thread::sleep_for( 1ms );
-   if( !s_is_running.load( acquire ) )
+   if( !s_is_running.load( mo_acquire ) )
       throw bad_usage( "日志系统尚未启动, 怎么轮转?" );
 
    s_log_infix = infix;
-   s_is_rolling.store( true, release );
+   s_is_rolling.store( true, mo_release );
    sem_post( &s_new_log );
    time_out = steady_clock::now() + 10s;
-   while( s_is_rolling.load( acquire ) && steady_clock::now() < time_out )
+   while( s_is_rolling.load( mo_acquire ) && steady_clock::now() < time_out )
       std::this_thread::sleep_for( 1ns );
 
-   if( s_is_rolling.load( acquire ) ) {
+   if( s_is_rolling.load( mo_acquire ) ) {
       s_writer.detach();
       throw std::runtime_error( "日志系统轮转超时!" );
    }
@@ -293,15 +293,15 @@ void writerThreadBody() {
    // 日志线程自己也可以添加日志,当然就也可以注册有意义的线程名称
    registThrdName( "Logger" );
 
-   while( s_should_run.load( acquire ) ) {
+   while( s_should_run.load( mo_acquire ) ) {
       processLogs();
 
       // 如果退出信号量循环,有可能就是为了轮转日志
-      if( s_is_rolling.load( acquire ) )
+      if( s_is_rolling.load( mo_acquire ) )
          renameLogFile();
    }
 
-   s_is_running.store( false, release );
+   s_is_running.store( false, mo_release );
 };
 
 void processLogs() {
@@ -316,18 +316,18 @@ void processLogs() {
 
    LogEntry_t aLog { SysTimeNS_t::clock::now(), "Logger", {}, LogLevel_e::Notif, };
    // LogEntry_t aLog; aLog.stamp  = SysTimeNS_t::clock::now(); aLog.thrd   = "Logger"; aLog.level  = LogLevel_e::Notif;
-   if( s_is_rolling.load( acquire ) )
+   if( s_is_rolling.load( mo_acquire ) )
       aLog.body = "---------- 日志文件已轮转 ----------";
    else
       aLog.body = "====== leonlog-" + string( PROJECT_VERSION ) + " 日志已启动("
                   + string( LOG_LEVEL_NAMES[static_cast<int>( g_log_level )] )
                   + ") ======";
    writeLog( ofsLogFile, aLog );
-   s_is_rolling.store( false, release );
-   s_is_running.store( true, release );
+   s_is_rolling.store( false, mo_release );
+   s_is_running.store( true, mo_release );
 
    // 主循环, 等待日志->写日志->判断是否需要轮转或退出, 周而复始...
-   while( s_should_run.load( acquire ) && !s_is_rolling.load( acquire ) ) {
+   while( s_should_run.load( mo_acquire ) && !s_is_rolling.load( mo_acquire ) ) {
       // 等一个信号
       sem_timedwait( &s_new_log, &tsNextFlush );
 
@@ -343,7 +343,7 @@ void processLogs() {
       }
    }
 
-   if( s_is_rolling.load( acquire ) ) {
+   if( s_is_rolling.load( mo_acquire ) ) {
       // 这是需要轮转日志
       aLog.level = LogLevel_e::Notif;
       aLog.thrd = "Logger";
