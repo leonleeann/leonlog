@@ -10,9 +10,9 @@
 #include <semaphore.h>
 #include <shared_mutex>
 #include <thread>
-// #include <sys/syscall.h>
-// #include <sys/types.h>
-// #include <unistd.h>
+#include <sys/syscall.h>   // SYS_gettid
+// #include <sys/types.h>  // pid_t
+#include <unistd.h>        // syscall
 
 #include "LeonLog.hpp"
 #include "ThreadName.hpp"
@@ -110,8 +110,8 @@ string      s_log_infix;
 
 // 给每个线程起个名字,输出的日志内能够看出每条日志都是由谁产生的
 thread_local string  tl_thd_name = thrdId2Hex();
-Names2PThread_t   s_pthread_ids; // 线程名到pthread_id的映射
-shared_mutex      s_mtx4nids;    // 更新s_pthread_ids时的同步控制
+Names2LinuxTId_t     s_t_ids;    // 线程名到t_id的映射
+shared_mutex      s_mtx4nids;    // 更新s_t_ids时的同步控制
 
 // 缓存日志的队列,整个系统产生的所有日志都存放于此,等待writer线程来消费
 unique_ptr<LogQue_t> s_log_que = nullptr;
@@ -240,11 +240,11 @@ extern "C" void registThreadName( const string& my_name ) {
 // 登记一个线程名, 此后输出该线程的日志时, 会包含此名，而非线程Id
    tl_thd_name = my_name;
    unique_lock<shared_mutex> ex_lk( s_mtx4nids );
-   s_pthread_ids[my_name] = pthread_self();
+   s_t_ids[my_name] = syscall( SYS_gettid );
 };
-extern Names2PThread_t pthreadIdOfNames() {
+extern Names2LinuxTId_t getLinuxThreadIds() {
    shared_lock<shared_mutex> sh_lk( s_mtx4nids );
-   Names2PThread_t result { s_pthread_ids };
+   Names2LinuxTId_t result { s_t_ids };
    return result;
 };
 

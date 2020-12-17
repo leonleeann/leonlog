@@ -1,3 +1,7 @@
+v1.5.1 纠正Linux线程Id取成POSIX线程号的错误
+
+v1.5.0 重新加上“线程名到Linux线程Id”的映射
+
 v1.4.4 新的处理pthread的cmake配置及选项
 
 v1.4.3 即使杀了日志线程还是要join它

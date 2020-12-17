@@ -1,4 +1,5 @@
 #include <LeonLog>
+#include <ThreadName>
 #include <atomic>
 #include <chrono>
 #include <cstdlib>
@@ -9,6 +10,7 @@
 #include <map>
 #include <string_view>
 #include <thread>
+#include <unistd.h>
 #include <vector>
 
 #include "misc/Converts.hpp"
@@ -36,6 +38,8 @@ std::vector<thread> makers;
 void threadBody( uint64_t p_uiMyId ) {
    string myName = string( "线程" ) + to_string( p_uiMyId );
    registThreadName( myName );
+   auto t_id = leon_log::getLinuxThreadIds()[myName];
+   log_debug << "[" << t_id << "]:开始了!";
    string_view sv { myName.c_str() };
 
    uint64_t j = 0;
@@ -56,13 +60,14 @@ void threadBody( uint64_t p_uiMyId ) {
       cerr << myName << "遭遇异常:" << e.what();
    }
 //   LOG_INFOR( myName + "总共循环:" + to_string( j ) );
-   log_infor << myName << "总共循环:" << j;
+   log_error << "[" << t_id << "]:总共循环:" << j;
 };
 
 int main( int argc, char** argv ) {
    g_app_name = argv[0];
    parseAppOptions( argc, argv );
-   cout << "\n日志库版本:" << leon_log::getVersion()
+   cout << "pid:" << getpid()
+        << "\n日志库版本:" << leon_log::getVersion()
         << "\n日志级别:" << LOG_LEVEL_NAMES[static_cast<int>( g_log_level )]
         << "\n时戳精度:" << g_stamp_p << "位"
         << "\n线程数量:" << g_threads
@@ -70,7 +75,7 @@ int main( int argc, char** argv ) {
         << "\n持续时间:" << g_lasting << "s"
         << "\n队列长度:" << g_quesize << endl;
 
-   startLogging( g_app_name + ".log", LogLevel_e::Error, g_stamp_p, g_quesize );
+   startLogging( g_app_name + ".log", LogLevel_e::Debug, g_stamp_p, g_quesize );
 
    for( uint64_t k = 0; k < g_threads; ++k )
       makers.emplace_back( thread( threadBody, k ) );
@@ -126,6 +131,9 @@ int main( int argc, char** argv ) {
 //    cerr << "==============准备停止日志系统==============" << endl;
 //    cout << "==============准备停止日志系统==============" << endl;
 //    cerr << "==============准备停止日志系统==============" << endl;
+   for( const auto& [n,i] : leon_log::getLinuxThreadIds() )
+      log_error << n << ":[" << i << "]." << endl;
+
    stopLogging();
    cout << "系统正常退出." << endl;
    return EXIT_SUCCESS;
