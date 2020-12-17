@@ -4,12 +4,12 @@ project( test-log LANGUAGES CXX )
 
 add_library( leonlog_s STATIC IMPORTED )
 add_library( leonlog_d SHARED IMPORTED )
-set_property( TARGET leonlog_s PROPERTY IMPORTED_LOCATION "/usr/local/lib/libleonlog.a" )
-set_property( TARGET leonlog_d PROPERTY IMPORTED_LOCATION "/usr/local/lib/libleonlog.so" )
+set_property( TARGET leonlog_s PROPERTY IMPORTED_LOCATION "/usr/local/lib/libLeonLog.a" )
+set_property( TARGET leonlog_d PROPERTY IMPORTED_LOCATION "/usr/local/lib/libLeonLog.so" )
 
 #======== obj libs =====================
 add_library( objlib_testLogging OBJECT
-   testLogging.cpp 
+   testLogging.cpp
    ${OCTOPUS_CODE_BASE}/common/chrono/Chrono.cpp
    ${OCTOPUS_CODE_BASE}/common/misc/Converts.cpp
 )
@@ -20,7 +20,6 @@ target_link_libraries( s-log
    Threads::Threads
    "stdc++fs"
    leonlog_s
-#    leonlog_static
 )
 install( TARGETS s-log RUNTIME DESTINATION testing )
 

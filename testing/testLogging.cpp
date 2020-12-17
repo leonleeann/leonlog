@@ -1,3 +1,4 @@
+#include <LeonLog>
 #include <atomic>
 #include <chrono>
 #include <cstdlib>
@@ -5,7 +6,6 @@
 #include <filesystem>
 #include <iomanip>
 #include <iostream>
-#include <leonlog>
 #include <map>
 #include <string_view>
 #include <thread>
@@ -35,7 +35,7 @@ std::vector<thread> makers;
 
 void threadBody( uint64_t p_uiMyId ) {
    string myName = string( "线程" ) + to_string( p_uiMyId );
-   registThrdName( myName );
+   registThreadName( myName );
    string_view sv { myName.c_str() };
 
    uint64_t j = 0;

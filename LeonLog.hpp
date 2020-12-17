@@ -1,8 +1,6 @@
 #pragma once
-// #include <functional>
-#include <sstream>
+#include <sstream>      // ostringstream
 #include <string>
-#include <string_view>
 
 namespace leon_log {
 
@@ -65,11 +63,11 @@ extern "C" void startLogging(
 // 关闭日志, 并Flush所有日志到磁盘
 extern "C" void stopLogging();
 
+// 为当前线程登记一个名字,此后输出该线程的日志会包含此名，而非线程Id
+extern "C" void registThreadName( const std::string& );
+
 // 添加日志的主函数
 extern "C" bool appendLog( LogLevel_e level, const std::string& body );
-
-// 可选函数, 登记一个线程名, 此后输出该线程的日志会包含此名，而非线程Id
-extern "C" void registThrdName( const std::string& thd_name );
 
 // 设置写盘间隔(每隔多少秒确保保存一次,默认3s)
 extern "C" void setFlushSeconds( unsigned int secs );  // 单位:秒

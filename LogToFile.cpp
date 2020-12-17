@@ -1,41 +1,38 @@
-#include <algorithm>
+#include <algorithm>    // for_each, max, min, sort, swap
 #include <atomic>
 #include <chrono>
-#include <cmath>
-#include <cstring>
+#include <cmath>        // abs, ceil, floor, isnan, log, log10, pow, round, sqrt
 #include <filesystem>
 #include <fstream>
 #include <iomanip>
 #include <iostream>
-#include <locale>
-#include <map>
 #include <memory>
-#include <mutex>
 #include <semaphore.h>
 #include <shared_mutex>
-#include <sstream>
-#include <sys/syscall.h>
-#include <sys/types.h>
 #include <thread>
-#include <unistd.h>
+// #include <sys/syscall.h>
+// #include <sys/types.h>
+// #include <unistd.h>
 
+#include "LeonLog.hpp"
+#include "ThreadName.hpp"
 #include "Version.hpp"
 #include "buffer/CraflinRQ.tpp"
 #include "chrono/Chrono.hpp"
-#include "leonlog.hpp"
+#include "common/event/MemoryOrder.hpp"
 #include "misc/Exceptions.hpp"
 
 using namespace leon_ext;
 using namespace std::chrono;
 using namespace std::chrono_literals;
 using namespace std::filesystem;
-using namespace std::this_thread;
 
 using std::atomic_bool;
 using std::cerr;
 using std::endl;
 using std::make_unique;
-using std::map;
+using std::max;
+using std::min;
 using std::ofstream;
 using std::ostringstream;
 using std::shared_lock;
@@ -68,16 +65,9 @@ struct LogEntry_t {
 };
 
 // LogQue_t: 日志队列(一个队列服务整个APP)
-using LogQue_t = leon_ext::CraflinRQ_t<LogEntry_t>;
+using LogQue_t = CraflinRQ_t<LogEntry_t>;
 
 //###### 各种常量 ###############################################################
-
-// constexpr auto mo_acq_rel = std::memory_order_acq_rel;
-constexpr auto mo_acquire = std::memory_order_acquire;
-// constexpr auto mo_consume = std::memory_order_consume;
-// constexpr auto mo_relaxed = std::memory_order_relaxed;
-constexpr auto mo_release = std::memory_order_release;
-// constexpr auto mo_seq_cst = std::memory_order_seq_cst;
 
 // 日志入队重试次数
 constexpr unsigned int ENQUE_RETRIES = 10;
@@ -120,6 +110,8 @@ string      s_log_infix;
 
 // 给每个线程起个名字,输出的日志内能够看出每条日志都是由谁产生的
 thread_local string  tl_thd_name = thrdId2Hex();
+Names2PThread_t   s_pthread_ids; // 线程名到pthread_id的映射
+shared_mutex      s_mtx4nids;    // 更新s_pthread_ids时的同步控制
 
 // 缓存日志的队列,整个系统产生的所有日志都存放于此,等待writer线程来消费
 unique_ptr<LogQue_t> s_log_que = nullptr;
@@ -157,16 +149,16 @@ extern "C" void startLogging( const string& log_file,
    if( s_is_running.load( mo_acquire ) )
       throw bad_usage( "日志系统已启动, 不能重复初始化!" );
 
-   const_cast<LogLevel_e&>( g_log_level ) =
-      std::min( LogLevel_e::Fatal, std::max( LogLevel_e::Debug, log_level ) );
-   s_stamp_pre = std::min<decltype( s_stamp_pre )>( t_precesion, 9 );
+//    const_cast<LogLevel_e&>( g_log_level ) =
+   g_log_level = min( LogLevel_e::Fatal, max( LogLevel_e::Debug, log_level ) );
+   s_stamp_pre = min<decltype( s_stamp_pre )>( t_precesion, 9 );
    s_time_unit = std::pow( 10.0, 9 - s_stamp_pre );
    s_log_file = log_file;
    s_log_que = make_unique<LogQue_t>( q_capacity );
    if( sem_init( &s_new_log, 0, 0 ) )
       throw std::runtime_error( "信号量创建失败, 不能启动日志系统!" );
 
-   registThrdName( "主线程" );
+   registThreadName( "主线程" );
    s_should_run.store( true, mo_release );
    s_writer = std::thread( writerThreadBody );
    steady_clock::time_point time_out = steady_clock::now() + 1s;
@@ -244,9 +236,16 @@ extern "C" bool appendLog( LogLevel_e level, const string& body ) {
    return true;
 };
 
-extern "C" void registThrdName( const string& thd_name ) {
+extern "C" void registThreadName( const string& my_name ) {
 // 登记一个线程名, 此后输出该线程的日志时, 会包含此名，而非线程Id
-   tl_thd_name = thd_name;
+   tl_thd_name = my_name;
+   unique_lock<shared_mutex> ex_lk( s_mtx4nids );
+   s_pthread_ids[my_name] = pthread_self();
+};
+extern Names2PThread_t pthreadIdOfNames() {
+   shared_lock<shared_mutex> sh_lk( s_mtx4nids );
+   Names2PThread_t result { s_pthread_ids };
+   return result;
 };
 
 // 设置写盘间隔(每隔多少秒确保保存一次,默认3s)
@@ -291,7 +290,7 @@ void writerThreadBody() {
     */
 
    // 日志线程自己也可以添加日志,当然就也可以注册有意义的线程名称
-   registThrdName( "Logger" );
+   registThreadName( "Logger" );
 
    while( s_should_run.load( mo_acquire ) ) {
       processLogs();
