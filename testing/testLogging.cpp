@@ -36,7 +36,9 @@ atomic_bool g_should_run = { true };
 std::vector<thread> makers;
 
 void threadBody( uint64_t p_uiMyId ) {
+   LogTimestamp_t tstamp;
    string myName = string( "线程" ) + to_string( p_uiMyId );
+   setTimestampPtr( &tstamp );
    registThreadName( myName );
    auto t_id = leon_log::getLinuxThreadIds()[myName];
    log_debug << "[" << t_id << "]:开始了!";

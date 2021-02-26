@@ -1,4 +1,5 @@
 #pragma once
+#include <chrono>
 #include <sstream>      // ostringstream
 #include <string>
 
@@ -41,6 +42,8 @@ constexpr std::string_view LOG_LEVEL_NAMES[] = {
    "FATAL"  // Fatal
 };
 
+using LogTimestamp_t = std::chrono::system_clock::time_point;
+
 // 全系统日志级别
 extern LogLevel_e g_log_level;
 /* static 会导致多重"影子"变量,下面这些都不行!
@@ -74,6 +77,9 @@ extern "C" void setFlushSeconds( unsigned int secs );  // 单位:秒
 
 // 设置退出等待时长(给日志线程多少时间清盘,默认1s)
 extern "C" void setExitSeconds( unsigned int secs );  // 单位:秒
+
+// 设置一个存放时间戳的指针,之后输出日志时都会去那个地址找时戳
+extern "C" void setTimestampPtr( const LogTimestamp_t* );
 
 // 轮转日志文件
 extern "C" void rotateLog( const std::string& infix /*中缀*/ );

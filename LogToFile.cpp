@@ -46,22 +46,19 @@ namespace leon_log {
 
 //###### 各种类型 ###############################################################
 
-// 日志时间,用于日志时戳
-// using LogTimePoint_T = time_point<system_clock, microseconds>;
-
 // LogEntry: 定义一条日志记录所具有的基本内容
 struct LogEntry_t {
    // 日志产生时间
-   SysTimeNS_t stamp;
+   LogTimestamp_t stamp;
 
    // 产生日志的线程
-   string      thrd;
+   string         tname;
 
    // 日志内容
-   string      body;
+   string         body;
 
    // 日志级别
-   LogLevel_e  level;
+   LogLevel_e     level;
 };
 
 // LogQue_t: 日志队列(一个队列服务整个APP)
@@ -109,9 +106,12 @@ string      s_log_file;
 string      s_log_infix;
 
 // 给每个线程起个名字,输出的日志内能够看出每条日志都是由谁产生的
-thread_local string  tl_thd_name = thrdId2Hex();
+thread_local string  tl_t_name = thrdId2Hex();
 Names2LinuxTId_t     s_t_ids;    // 线程名到t_id的映射
-shared_mutex      s_mtx4nids;    // 更新s_t_ids时的同步控制
+shared_mutex         s_mtx4nids;    // 更新s_t_ids时的同步控制
+
+// 日志时戳,为空就用当前时间
+thread_local const LogTimestamp_t* tl_stamp = nullptr;
 
 // 缓存日志的队列,整个系统产生的所有日志都存放于此,等待writer线程来消费
 unique_ptr<LogQue_t> s_log_que = nullptr;
@@ -206,26 +206,26 @@ extern "C" void stopLogging() {
 
 // 添加日志的主函数, 此处是实现。此函数只是把日志加入队列, 等待日志线程来写入文件
 extern "C" bool appendLog( LogLevel_e level, const string& body ) {
-
    // 只有不低于门限值的日志才能得到输出
    if( level < g_log_level )
       return false;
 
    // 日志系统必须已经启动
-   if( !s_is_running.load( mo_acquire ) ) {
+   if( ! s_is_running.load( mo_acquire ) ) {
       cerr << LOG_LEVEL_NAMES[static_cast<int>( level )]
-           << ",早期日志," << body << "\n";
+           << ",早期日志," << tl_t_name << ',' << body << "\n";
       return true;
    }
 
    // 日志入队
-   LogEntry_t le { SysTimeNS_t::clock::now(), tl_thd_name, body, level, };
+   LogEntry_t le { tl_stamp != nullptr ? *tl_stamp : system_clock::now(),
+                   tl_t_name, body, level, };
    auto tries = ENQUE_RETRIES;
-   while( !s_log_que->enque( le ) ) {
+   while( ! s_log_que->enque( le ) ) {
       --tries;
       if( tries == 0 ) {
          cerr << LOG_LEVEL_NAMES[static_cast<int>( LogLevel_e::Error )]
-              << "," << tl_thd_name << ",日志入队失败,抛弃日志:"
+              << "," << tl_t_name << ",日志入队失败,抛弃日志:"
               << body << endl;
          return false;
       }
@@ -238,7 +238,7 @@ extern "C" bool appendLog( LogLevel_e level, const string& body ) {
 
 extern "C" void registThreadName( const string& my_name ) {
 // 登记一个线程名, 此后输出该线程的日志时, 会包含此名，而非线程Id
-   tl_thd_name = my_name;
+   tl_t_name = my_name;
    unique_lock<shared_mutex> ex_lk( s_mtx4nids );
    s_t_ids[my_name] = syscall( SYS_gettid );
 };
@@ -256,6 +256,10 @@ extern "C" void setFlushSeconds( unsigned int secs ) {
 // 设置退出等待时长(给日志线程多少时间清盘,默认1s)
 extern "C" void setExitSeconds( unsigned int secs ) {
    s_exit_secs = secs;
+};
+
+extern "C" void setTimestampPtr( const LogTimestamp_t* tstamp ) {
+   tl_stamp = tstamp;
 };
 
 extern "C" void rotateLog( const string& infix ) {
@@ -345,7 +349,7 @@ void processLogs() {
    if( s_is_rolling.load( mo_acquire ) ) {
       // 这是需要轮转日志
       aLog.level = LogLevel_e::Notif;
-      aLog.thrd = "Logger";
+      aLog.tname = "Logger";
       aLog.stamp = SysTimeNS_t::clock::now();
       aLog.body = "---------- 日志文件将轮转 ----------";
       writeLog( ofsLogFile, aLog );
@@ -357,7 +361,7 @@ void processLogs() {
             writeLog( ofsLogFile, aLog );
 
       aLog.level = LogLevel_e::Notif;
-      aLog.thrd = "Logger";
+      aLog.tname = "Logger";
       aLog.stamp = SysTimeNS_t::clock::now();
       aLog.body = "================ 日志已停止 =================";
       writeLog( ofsLogFile, aLog );
@@ -369,11 +373,13 @@ void processLogs() {
 const char* const LOG_STAMP_FORMAT = "%m/%d %H:%M:%S";
 
 inline void writeLog( ofstream& p_out, const LogEntry_t& log ) {
-   SysTimeNS_t tpSecPart =
-      time_point_cast<SysTimeNS_t::duration>(
+   LogTimestamp_t tpSecPart =
+      time_point_cast<LogTimestamp_t::duration>(
          std::chrono::floor<seconds>( log.stamp ) );
+
    // 输出时戳
    p_out << formatTime( tpSecPart, LOG_STAMP_FORMAT );
+
    // 是否精确到秒以下
    if( s_stamp_pre > 0 ) {
       uint64_t sub_sec =
@@ -383,10 +389,10 @@ inline void writeLog( ofstream& p_out, const LogEntry_t& log ) {
    }
 
    p_out << ',' << LOG_LEVEL_NAMES[static_cast<int>( log.level )]
-         << ',' << log.thrd << ',' << log.body << "\n";
-   cerr
-         << LOG_LEVEL_NAMES[static_cast<int>( log.level )]
-         << ',' << log.thrd << ',' << log.body << "\n";
+         << ',' << log.tname << ',' << log.body << "\n";
+
+   cerr << LOG_LEVEL_NAMES[static_cast<int>( log.level )]
+        << ',' << log.tname << ',' << log.body << "\n";
 };
 
 void renameLogFile() {
