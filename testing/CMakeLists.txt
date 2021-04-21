@@ -2,11 +2,6 @@ cmake_minimum_required(VERSION 3.0.0)
 
 project( test-log LANGUAGES CXX )
 
-add_library( leonlog_s STATIC IMPORTED )
-add_library( leonlog_d SHARED IMPORTED )
-set_property( TARGET leonlog_s PROPERTY IMPORTED_LOCATION "/usr/local/lib/libLeonLog.a" )
-set_property( TARGET leonlog_d PROPERTY IMPORTED_LOCATION "/usr/local/lib/libLeonLog.so" )
-
 #======== obj libs =====================
 add_library( objTestLog OBJECT
    testLogging.cpp
@@ -19,7 +14,7 @@ add_executable( s-log $<TARGET_OBJECTS:objTestLog> )
 target_link_libraries( s-log
    Threads::Threads
    "stdc++fs"
-   leonlog_s
+   leonlog_static
 )
 install( TARGETS s-log RUNTIME DESTINATION testing )
 
@@ -28,6 +23,6 @@ add_executable( d-log $<TARGET_OBJECTS:objTestLog> )
 target_link_libraries( d-log
    Threads::Threads
    "stdc++fs"
-   leonlog_d
+   leonlog_shared
 )
 install( TARGETS d-log RUNTIME DESTINATION testing )

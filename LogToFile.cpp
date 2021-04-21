@@ -370,7 +370,7 @@ void processLogs() {
    ofsLogFile.close();
 };
 
-const char* const LOG_STAMP_FORMAT = "%m/%d %H:%M:%S";
+const char* const LOG_STAMP_FORMAT = "%y/%m/%d %H:%M:%S";
 
 inline void writeLog( ofstream& p_out, const LogEntry_t& log ) {
    LogTimestamp_t tpSecPart =
