@@ -158,7 +158,7 @@ extern "C" void startLogging( const string& log_file,
    if( sem_init( &s_new_log, 0, 0 ) )
       throw std::runtime_error( "信号量创建失败, 不能启动日志系统!" );
 
-   registThreadName( "主线程" );
+   registThreadName( "MainThread" );
    s_should_run.store( true, mo_release );
    s_writer = std::thread( writerThreadBody );
    steady_clock::time_point time_out = steady_clock::now() + 1s;
@@ -194,7 +194,7 @@ extern "C" void stopLogging() {
       //s_writer.detach();
       cerr << "====日志线程已杀!!!====" << endl;
    }
-   
+
 #ifdef DEBUG
    cerr << "joinning writer..." << endl;
 #endif

@@ -14,7 +14,7 @@ add_executable( s-log $<TARGET_OBJECTS:objTestLog> )
 target_link_libraries( s-log
    Threads::Threads
    "stdc++fs"
-   leonlog_static
+   target_static
 )
 install( TARGETS s-log RUNTIME DESTINATION testing )
 
@@ -23,6 +23,6 @@ add_executable( d-log $<TARGET_OBJECTS:objTestLog> )
 target_link_libraries( d-log
    Threads::Threads
    "stdc++fs"
-   leonlog_shared
+   target_dynmic
 )
 install( TARGETS d-log RUNTIME DESTINATION testing )

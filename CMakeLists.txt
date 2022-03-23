@@ -2,14 +2,14 @@ cmake_minimum_required( VERSION 3.0.0 )
 
 set( PROJECT_VERSION_MAJOR 1 )   # 主版本
 set( PROJECT_VERSION_MINOR 5 )   # 次版本
-set( PROJECT_VERSION_PATCH 3 )   # 修订号(Bug fix)
+set( PROJECT_VERSION_PATCH 4 )   # 修订号(Bug fix)
 
 # 版本全串
 set( PROJECT_VERSION
    ${PROJECT_VERSION_MAJOR}.${PROJECT_VERSION_MINOR}.${PROJECT_VERSION_PATCH})
 
 # 版本说明
-set( PROJECT_VERSION_NOTES "时戳还是需要年份" )
+set( PROJECT_VERSION_NOTES "主线程名采用英语" )
 
 # 项目描述
 set( PROJECT_DESCRIPTION   "线程安全的异步文件日志库" )
@@ -21,11 +21,11 @@ project( LeonLog
 )
 set( OCTOPUS_CODE_BASE $ENV{OCTOPUS_CODE_BASE} )
 include( ${OCTOPUS_CODE_BASE}/common/OctopusCommon.cmake )
-configure_file( ${OCTOPUS_CODE_BASE}/common/misc/Version.hpp.in Version.hpp )
+configure_file( ${OCTOPUS_CODE_BASE}/common/version/Version.hpp.in Version.hpp )
 set( CMAKE_INCLUDE_CURRENT_DIR ON )
 
 ######## 主要程序 ###############################################################
-#[[======== 静态版 =====================
+#======== 静态版 =====================
 add_library( target_static STATIC LogToFile.cpp )
 set_target_properties(  target_static PROPERTIES
    OUTPUT_NAME_RELEASE  LeonLog
@@ -55,7 +55,7 @@ target_link_libraries( target_dynmic Threads::Threads )
 install( TARGETS target_dynmic
    ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
    PUBLIC_HEADER DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
-)]]
+)
 
 ######## 单元测试 ###############################################################
 add_subdirectory( testing )
