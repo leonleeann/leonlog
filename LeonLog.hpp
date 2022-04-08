@@ -139,21 +139,21 @@ inline Logger_t& operator<<( Logger_t& logger, const T& body ) {
 
 #ifdef DEBUG
 
-#define log_debug g_log_level <= LogLevel_e::Debug && Logger_t(LogLevel_e::Debug) << __func__ << "(),"
-#define log_infor g_log_level <= LogLevel_e::Infor && Logger_t(LogLevel_e::Infor) << __func__ << "(),"
-#define log_notif g_log_level <= LogLevel_e::Notif && Logger_t(LogLevel_e::Notif) << __func__ << "(),"
-#define log_warnn g_log_level <= LogLevel_e::Warnn && Logger_t(LogLevel_e::Warnn) << __func__ << "(),"
-#define log_error g_log_level <= LogLevel_e::Error && Logger_t(LogLevel_e::Error) << __func__ << "(),"
-#define log_fatal g_log_level <= LogLevel_e::Fatal && Logger_t(LogLevel_e::Fatal) << __func__ << "(),"
+#define lg_debg g_log_level <= LogLevel_e::Debug && Logger_t(LogLevel_e::Debug) << __func__ << "(),"
+#define lg_infr g_log_level <= LogLevel_e::Infor && Logger_t(LogLevel_e::Infor) << __func__ << "(),"
+#define lg_note g_log_level <= LogLevel_e::Notif && Logger_t(LogLevel_e::Notif) << __func__ << "(),"
+#define lg_warn g_log_level <= LogLevel_e::Warnn && Logger_t(LogLevel_e::Warnn) << __func__ << "(),"
+#define lg_erro g_log_level <= LogLevel_e::Error && Logger_t(LogLevel_e::Error) << __func__ << "(),"
+#define lg_fatl g_log_level <= LogLevel_e::Fatal && Logger_t(LogLevel_e::Fatal) << __func__ << "(),"
 
 #else
 
-#define log_debug g_log_level <= LogLevel_e::Debug && Logger_t(LogLevel_e::Debug)
-#define log_infor g_log_level <= LogLevel_e::Infor && Logger_t(LogLevel_e::Infor)
-#define log_notif g_log_level <= LogLevel_e::Notif && Logger_t(LogLevel_e::Notif)
-#define log_warnn g_log_level <= LogLevel_e::Warnn && Logger_t(LogLevel_e::Warnn)
-#define log_error g_log_level <= LogLevel_e::Error && Logger_t(LogLevel_e::Error)
-#define log_fatal g_log_level <= LogLevel_e::Fatal && Logger_t(LogLevel_e::Fatal)
+#define lg_debg g_log_level <= LogLevel_e::Debug && Logger_t(LogLevel_e::Debug)
+#define lg_infr g_log_level <= LogLevel_e::Infor && Logger_t(LogLevel_e::Infor)
+#define lg_note g_log_level <= LogLevel_e::Notif && Logger_t(LogLevel_e::Notif)
+#define lg_warn g_log_level <= LogLevel_e::Warnn && Logger_t(LogLevel_e::Warnn)
+#define lg_erro g_log_level <= LogLevel_e::Error && Logger_t(LogLevel_e::Error)
+#define lg_fatl g_log_level <= LogLevel_e::Fatal && Logger_t(LogLevel_e::Fatal)
 
 #endif
 
