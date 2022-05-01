@@ -65,6 +65,8 @@ extern "C" void startLogging(
 
 // 关闭日志, 并Flush所有日志到磁盘
 extern "C" void stopLogging();
+// 在fork后的子进程内关闭日志,因为此时没有writer线程,只能静默释放资源
+extern "C" void _stopLogging();
 
 // 为当前线程登记一个名字,此后输出该线程的日志会包含此名，而非线程Id
 extern "C" void registThreadName( const std::string& );
@@ -140,7 +142,7 @@ inline Logger_t& operator<<( Logger_t& logger, const T& body ) {
 #ifdef DEBUG
 
 #define lg_debg g_log_level <= LogLevel_e::Debug && Logger_t(LogLevel_e::Debug) << __func__ << "(),"
-#define lg_infr g_log_level <= LogLevel_e::Infor && Logger_t(LogLevel_e::Infor) << __func__ << "(),"
+#define lg_info g_log_level <= LogLevel_e::Infor && Logger_t(LogLevel_e::Infor) << __func__ << "(),"
 #define lg_note g_log_level <= LogLevel_e::Notif && Logger_t(LogLevel_e::Notif) << __func__ << "(),"
 #define lg_warn g_log_level <= LogLevel_e::Warnn && Logger_t(LogLevel_e::Warnn) << __func__ << "(),"
 #define lg_erro g_log_level <= LogLevel_e::Error && Logger_t(LogLevel_e::Error) << __func__ << "(),"
@@ -149,7 +151,7 @@ inline Logger_t& operator<<( Logger_t& logger, const T& body ) {
 #else
 
 #define lg_debg g_log_level <= LogLevel_e::Debug && Logger_t(LogLevel_e::Debug)
-#define lg_infr g_log_level <= LogLevel_e::Infor && Logger_t(LogLevel_e::Infor)
+#define lg_info g_log_level <= LogLevel_e::Infor && Logger_t(LogLevel_e::Infor)
 #define lg_note g_log_level <= LogLevel_e::Notif && Logger_t(LogLevel_e::Notif)
 #define lg_warn g_log_level <= LogLevel_e::Warnn && Logger_t(LogLevel_e::Warnn)
 #define lg_erro g_log_level <= LogLevel_e::Error && Logger_t(LogLevel_e::Error)
