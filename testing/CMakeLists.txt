@@ -3,26 +3,44 @@ cmake_minimum_required(VERSION 3.0.0)
 project( test-log LANGUAGES CXX )
 
 #======== obj libs =====================
+add_library( objCommon OBJECT
+	${OCTOPUS_CODE_BASE}/common/chrono/Chrono.cpp
+	${OCTOPUS_CODE_BASE}/common/misc/Converts.cpp
+)
+
 add_library( objTestLog OBJECT
-   testLogging.cpp
-   ${OCTOPUS_CODE_BASE}/common/chrono/Chrono.cpp
-   ${OCTOPUS_CODE_BASE}/common/misc/Converts.cpp
+	testLogging.cpp
 )
 
 #======== 静态版 =====================
-add_executable( s-log $<TARGET_OBJECTS:objTestLog> )
+add_executable( s-log )
 target_link_libraries( s-log
-   Threads::Threads
-   "stdc++fs"
-   target_static
+	objCommon
+	objTestLog
+	Threads::Threads
+	"stdc++fs"
+	target_static
 )
 install( TARGETS s-log RUNTIME DESTINATION testing )
 
 #======== 动态版 =====================
-add_executable( d-log $<TARGET_OBJECTS:objTestLog> )
+add_executable( d-log )
 target_link_libraries( d-log
-   Threads::Threads
-   "stdc++fs"
-   target_dynmic
+	objCommon
+	objTestLog
+	Threads::Threads
+	"stdc++fs"
+	target_dynmic
 )
 install( TARGETS d-log RUNTIME DESTINATION testing )
+
+#[[======== test forking =====================
+add_executable( testForking testForking.cpp )
+target_link_libraries( testForking
+	objCommon
+	Threads::Threads
+	"stdc++fs"
+	target_static
+)
+install( TARGETS testForking RUNTIME DESTINATION testing )
+]]

@@ -189,7 +189,7 @@ extern "C" void stopLogging() {
 
 // 如果日志线程还在运行,就强制把它杀了
 	if( s_is_running.load( mo_acquire ) ) {
-		cerr << "====队内日志太多(" << s_log_que->size()
+		cerr << "====队内日志太多(" << s_log_que->size() << '/' << s_log_que->capacity()
 			 << "),写不完了.将要杀掉日志线程...====" << endl;
 		pthread_cancel( s_writer.native_handle() );
 		//s_writer.detach();
@@ -205,20 +205,24 @@ extern "C" void stopLogging() {
 		throw std::runtime_error( "信号量销毁失败!" );
 };
 
-extern "C" void _stopLogging() {
-	s_is_running.store( false, mo_release );
-	s_should_run.store( false, mo_release );
+/* extern "C" void _stopLogging() {
+	try {
+		s_is_running.store( false, mo_release );
+		s_should_run.store( false, mo_release );
 
-	LogEntry_t aLog;
-	while( s_log_que->deque( aLog ) )
-		;
+		LogEntry_t aLog;
+		while( s_log_que->deque( aLog ) )
+			;
 
-	s_t_ids.clear();
-	s_log_que = nullptr;
-	s_log_ofs = nullptr;
-	if( sem_destroy( &s_new_log ) )
-		throw std::runtime_error( "信号量销毁失败!" );
-};
+		s_t_ids.clear();
+		s_log_que = nullptr;
+		s_log_ofs = nullptr;
+		if( sem_destroy( &s_new_log ) )
+			throw std::runtime_error( "信号量销毁失败!" );
+	} catch( ... ) {
+		cerr << "出错";
+	};
+}; */
 
 // 添加日志的主函数, 此处是实现。此函数只是把日志加入队列, 等待日志线程来写入文件
 extern "C" bool appendLog( LogLevel_e level, const string& body ) {
