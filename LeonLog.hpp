@@ -58,13 +58,16 @@ extern "C" const char* getVersion();
 
 // 指定日志文件名, 启动日志系统
 extern "C" void startLogging(
-   const std::string&   log_file,                           // 日志文件路径及名称
-   LogLevel_e           log_levl = LogLevel_e::Debug,       // 日志级别
-   size_t               stamp_precision = 6,                // 时戳精度
-   size_t               que_size = DEFAULT_LOG_QUE_SIZE );  // 队列容量
+	const std::string&	log_file,						// 日志文件路径及名称
+	LogLevel_e			log_levl = LogLevel_e::Debug,	// 日志级别
+	size_t				stamp_precision = 6,			// 时戳精度
+	size_t				que_size = DEFAULT_LOG_QUE_SIZE,// 日志队列容量
+	bool				header = true					// 启动时输出header
+);  // 队列容量
 
 // 关闭日志, 并Flush所有日志到磁盘
-extern "C" void stopLogging();
+extern "C" void stopLogging( bool footer = true ); // 停止时输出footer
+
 // 在fork后的子进程内关闭日志,因为此时没有writer线程,只能静默释放资源
 // extern "C" void _stopLogging();
 

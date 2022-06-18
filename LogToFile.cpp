@@ -128,6 +128,8 @@ atomic_bool	s_is_rolling = { false };
 atomic_bool	s_should_run = { false };
 // 日志系统正在运行标志, 避免重复启动
 atomic_bool	s_is_running = { false };
+// 要不要在启停时输出header/footer
+atomic_bool	s_headr_foot = { true };
 
 //###### 各种函数实现 ############################################################
 
@@ -143,19 +145,21 @@ extern "C" const char* getVersion() {
 	return PROJECT_VERSION;
 };
 
-extern "C" void startLogging( const string& log_file,
-							  LogLevel_e    log_level,
-							  size_t        t_precesion,
-							  size_t        q_capacity ) {
+extern "C" void startLogging( const string&	file_,
+							  LogLevel_e	levl_,
+							  size_t		prec_,
+							  size_t		capa_,
+							  bool			head_ ) {
 	if( s_is_running.load( mo_acquire ) )
 		throw bad_usage( "日志系统已启动, 不能重复初始化!" );
 
 //	const_cast<LogLevel_e&>( g_log_level ) =
-	g_log_level = min( LogLevel_e::Fatal, max( LogLevel_e::Debug, log_level ) );
-	s_stamp_pre = min<decltype( s_stamp_pre )>( t_precesion, 9 );
+	g_log_level = min( LogLevel_e::Fatal, max( LogLevel_e::Debug, levl_ ) );
+	s_stamp_pre = min<decltype( s_stamp_pre )>( prec_, 9 );
 	s_time_unit = std::pow( 10.0, 9 - s_stamp_pre );
-	s_log_file = log_file;
-	s_log_que = make_unique<LogQue_t>( q_capacity );
+	s_log_file = file_;
+	s_log_que = make_unique<LogQue_t>( capa_ );
+	s_headr_foot.store( head_ );
 	if( sem_init( &s_new_log, 0, 0 ) )
 		throw std::runtime_error( "信号量创建失败, 不能启动日志系统!" );
 
@@ -173,11 +177,13 @@ extern "C" void startLogging( const string& log_file,
 	}
 };
 
-extern "C" void stopLogging() {
+extern "C" void stopLogging( bool footer_ ) {
 	if( !s_is_running.load( mo_acquire ) )
 		throw bad_usage( "日志系统尚未启动, 怎么关闭?" );
 
-	LOG_NOTIF( "将要停止日志系统......" );
+	if( footer_ )
+		LOG_NOTIF( "将要停止日志系统......" );
+	s_headr_foot.store( footer_, mo_release );
 	s_should_run.store( false, mo_release );
 	steady_clock::time_point time_out =
 		steady_clock::now() + seconds( s_exit_secs );
@@ -341,7 +347,7 @@ void processLogs() {
 //	LogEntry_t aLog; aLog.stamp = SysTimeNS_t::clock::now(); aLog.thrd = "Logger"; aLog.level  = LogLevel_e::Notif;
 	if( s_is_rolling.load( mo_acquire ) )
 		aLog.body = "---------- 日志文件已轮转 ----------";
-	else
+	else if( s_headr_foot.load( mo_acquire ) )
 		aLog.body = "====== leonlog-" + string( PROJECT_VERSION ) + " 日志已启动("
 					+ string( LOG_LEVEL_NAMES[static_cast<int>( g_log_level )] )
 					+ ") ======";
@@ -383,7 +389,8 @@ void processLogs() {
 		aLog.level = LogLevel_e::Notif;
 		aLog.tname = "Logger";
 		aLog.stamp = SysTimeNS_t::clock::now();
-		aLog.body = "================ 日志已停止 =================";
+		if( s_headr_foot.load( mo_acquire ) )
+			aLog.body = "================ 日志已停止 =================";
 		writeLog( *s_log_ofs, aLog );
 	}
 
