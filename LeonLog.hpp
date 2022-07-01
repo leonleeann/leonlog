@@ -67,6 +67,9 @@ extern "C" void startLogging(
 
 // 关闭日志, 并Flush所有日志到磁盘
 extern "C" void stopLogging( bool footer = true ); // 停止时输出footer
+extern "C" bool logIsRunning();
+// 显示错误信息,关闭日志并退出
+extern "C" void exitWithLog( const std::string& );
 
 // 在fork后的子进程内关闭日志,因为此时没有writer线程,只能静默释放资源
 // extern "C" void _stopLogging();

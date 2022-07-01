@@ -179,7 +179,8 @@ extern "C" void startLogging( const string&	file_,
 
 extern "C" void stopLogging( bool footer_ ) {
 	if( !s_is_running.load( mo_acquire ) )
-		throw bad_usage( "日志系统尚未启动, 怎么关闭?" );
+// 		throw bad_usage( "日志系统尚未启动, 怎么关闭?" );
+		return;
 
 	if( footer_ )
 		LOG_NOTIF( "将要停止日志系统......" );
@@ -209,6 +210,20 @@ extern "C" void stopLogging( bool footer_ ) {
 
 	if( sem_destroy( &s_new_log ) )
 		throw std::runtime_error( "信号量销毁失败!" );
+};
+
+extern "C" bool logIsRunning() {
+	return s_is_running.load( mo_acquire );
+};
+
+extern "C" void exitWithLog( const std::string& err ) {
+	std::cerr << err << std::endl;
+
+	if( s_is_running.load( mo_acquire ) ) {
+		appendLog( LogLevel_e::Fatal, err );
+		stopLogging();
+	}
+	exit( EXIT_FAILURE );
 };
 
 /* extern "C" void _stopLogging() {
