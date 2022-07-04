@@ -69,8 +69,8 @@ int main( int argc, char** argv ) {
 	g_app_name = argv[0];
 	parseAppOptions( argc, argv );
 	cout << "pid:" << getpid()
-		 << "\n日志库版本:" << leon_log::getVersion()
-		 << "\n日志级别:" << LOG_LEVEL_NAMES[static_cast<int>( g_log_level )]
+		 << "\n日志库版本:" << leon_log::Version()
+		 << "\n日志级别:" << leon_log::LevelName( g_log_level )
 		 << "\n时戳精度:" << g_stamp_p << "位"
 		 << "\n线程数量:" << g_threads
 		 << "\n生产间隔:" << g_intervl << "ns"

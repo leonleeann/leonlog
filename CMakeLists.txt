@@ -1,15 +1,15 @@
-cmake_minimum_required( VERSION 3.0.0 )
+cmake_minimum_required( VERSION 3.4.0 )
 
 set( PROJECT_VERSION_MAJOR 1 )   # 主版本
-set( PROJECT_VERSION_MINOR 5 )   # 次版本
-set( PROJECT_VERSION_PATCH 9 )   # 修订号(Bug fix)
+set( PROJECT_VERSION_MINOR 6 )   # 次版本
+set( PROJECT_VERSION_PATCH 0 )   # 修订号(Bug fix)
 
 # 版本全串
 set( PROJECT_VERSION
    ${PROJECT_VERSION_MAJOR}.${PROJECT_VERSION_MINOR}.${PROJECT_VERSION_PATCH})
 
 # 版本说明
-set( PROJECT_VERSION_NOTES "增加logIsRunning函数且可以重复停止" )
+set( PROJECT_VERSION_NOTES "CMake3_4_0" )
 
 # 项目描述
 set( PROJECT_DESCRIPTION   "线程安全的异步文件日志库" )

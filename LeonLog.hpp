@@ -5,41 +5,32 @@
 
 namespace leon_log {
 
-enum class LogLevel_e {
-   // 供跟踪、调试时使用的日志, Release编译时不会生成相应代码
-   Debug = 0,
+enum LogLevel_e : int {
+	// 供跟踪、调试时使用的日志, Release编译时不会生成相应代码
+	Debug = 0,
 
-   // 程序运行期间非常详尽的细节报告, 供运维期间排查问题使用
-   // 如: "本次写入DB数据为...."
-   Infor,
+	// 程序运行期间非常详尽的细节报告, 供运维期间排查问题使用
+	// 如: "本次写入DB数据为...."
+	Infor,
 
-   // 程序运行期间较简洁的状态报告, "通知性"、"状态转移性"报告
-   // 如: "通信连接成功"、"数据库连接成功"
-   Notif,
+	// 程序运行期间较简洁的状态报告, "通知性"、"状态转移性"报告
+	// 如: "通信连接成功"、"数据库连接成功"
+	Notif,
 
-   // "警示性"报告, 通常用于指出某些尚能容忍的异常情况, 程序尚能运行
-   // 如: "通信中收到异常数据"、"函数收到异常参数等"
-   Warnn,
+	// "警示性"报告, 通常用于指出某些尚能容忍的异常情况, 程序尚能运行
+	// 如: "通信中收到异常数据"、"函数收到异常参数等"
+	Warnn,
 
-   // 错误报告, 指出程序已出现明显错误且无法自行恢复的状态, 但尚能"优雅地"退出
-   // 如: "服务器拒绝登录"、"没有文件访问权限，无法继续"
-   Error,
+	// 错误报告, 指出程序已出现明显错误且无法自行恢复的状态, 但尚能"优雅地"退出
+	// 如: "服务器拒绝登录"、"没有文件访问权限，无法继续"
+	Error,
 
-   // 失败报告, 指出程序已出现"崩溃性"错误, 将会立即崩溃
-   // 如: "SegFalt"、"Abort"
-   Fatal,
+	// 失败报告, 指出程序已出现"崩溃性"错误, 将会立即崩溃
+	// 如: "SegFalt"、"Abort"
+	Fatal,
 
-   // 取值计数
-   VALUES_COUNT
-};
-
-constexpr std::string_view LOG_LEVEL_NAMES[] = {
-   "DEBUG", // Debug
-   "INFOR", // Infor
-   "NOTIF", // Notif
-   "WARNN", // Warnn
-   "ERROR", // Error
-   "FATAL"  // Fatal
+	// 取值计数
+	VALUES_COUNT
 };
 
 using LogTimestamp_t = std::chrono::system_clock::time_point;
@@ -54,7 +45,8 @@ extern LogLevel_e g_log_level;
 // 队列再大也只是缓冲突发的日志，如果产生日志持续比消费日志快, 再大的队列也会爆...
 constexpr size_t DEFAULT_LOG_QUE_SIZE = 256;
 
-extern "C" const char* getVersion();
+extern "C" const char* Version();
+extern "C" const char* LevelName( LogLevel_e );
 
 // 指定日志文件名, 启动日志系统
 extern "C" void startLogging(
@@ -114,35 +106,35 @@ extern "C" void rotateLog( const std::string& infix /*中缀*/ );
 
 class Logger_t : public std::ostringstream {
 public:
-   explicit Logger_t( LogLevel_e l ) : m_LogLevel( l ) {};
+	explicit Logger_t( LogLevel_e l ) : m_LogLevel( l ) {};
 
-   // 释放本对象时一并输出,且本类可派生
-   ~Logger_t() override {
-      appendLog( m_LogLevel, str() );
-   };
+	// 释放本对象时一并输出,且本类可派生
+	~Logger_t() override {
+		appendLog( m_LogLevel, str() );
+	};
 
-   inline operator bool() {
-      return m_LogLevel >= g_log_level;
-   };
+	inline operator bool() {
+		return m_LogLevel >= g_log_level;
+	};
 
-   // 把属性公开之后,就不需要后面那一堆友元函数了.关键是,用户自定义类型也可流式输出了!
-   LogLevel_e m_LogLevel;
+	// 把属性公开之后,就不需要后面那一堆友元函数了.关键是,用户自定义类型也可流式输出了!
+	LogLevel_e m_LogLevel;
 };
 
 template <typename T>
 inline Logger_t& operator<<( Logger_t& logger, const T& body ) {
 
-   if( logger.m_LogLevel >= g_log_level )
-      static_cast<std::ostringstream&>( logger ) << ( body );
+	if( logger.m_LogLevel >= g_log_level )
+		static_cast<std::ostringstream&>( logger ) << ( body );
 
 // 很多自定义类(包括STL内的)会重载(overloading) << 运算符,以便输出自己,所以不可能直接
 // 调用 ostream::operator<<() 的方法(以下都不好):
-//    static_cast<std::ostringstream&>( logger ).operator<<( body );
-//    dynamic_cast<std::ostringstream&>( logger ).operator<<( body );
-//    dynamic_cast<std::ostringstream&>( logger ) << body;
-//    return std::ostringstream::operator<<( body );
+// static_cast<std::ostringstream&>( logger ).operator<<( body );
+// dynamic_cast<std::ostringstream&>( logger ).operator<<( body );
+// dynamic_cast<std::ostringstream&>( logger ) << body;
+// return std::ostringstream::operator<<( body );
 
-   return logger;
+	return logger;
 };
 
 #ifdef DEBUG

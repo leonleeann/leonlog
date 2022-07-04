@@ -66,6 +66,15 @@ using LogQue_t = CraflinRQ_t<LogEntry_t>;
 
 //###### 各种常量 ###############################################################
 
+const std::string LOG_LEVEL_NAMES[] = {
+	"DEBUG", // Debug
+	"INFOR", // Infor
+	"NOTIF", // Notif
+	"WARNN", // Warnn
+	"ERROR", // Error
+	"FATAL"  // Fatal
+};
+
 // 日志入队重试次数
 constexpr unsigned int ENQUE_RETRIES = 10;
 // constexpr unsigned int CHECK_INTERVL = 128;
@@ -141,8 +150,12 @@ inline string thrdId2Hex( thread::id thread_id ) {
 
 //==== 实现API的几个函数 ==============
 
-extern "C" const char* getVersion() {
+extern "C" const char* Version() {
 	return PROJECT_VERSION;
+};
+
+extern "C" const char* LevelName( LogLevel_e ll ) {
+	return LOG_LEVEL_NAMES[ll].c_str();
 };
 
 extern "C" void startLogging( const string&	file_,
@@ -253,7 +266,7 @@ extern "C" bool appendLog( LogLevel_e level, const string& body ) {
 
 	// 日志系统必须已经启动
 	if( ! s_is_running.load( mo_acquire ) ) {
-		cerr << LOG_LEVEL_NAMES[static_cast<int>( level )]
+		cerr << LOG_LEVEL_NAMES[level]
 			 << ",早期日志," << tl_t_name << ',' << body << "\n";
 		return true;
 	}
@@ -265,7 +278,7 @@ extern "C" bool appendLog( LogLevel_e level, const string& body ) {
 	while( ! s_log_que->enque( le ) ) {
 		--tries;
 		if( tries == 0 ) {
-			cerr << LOG_LEVEL_NAMES[static_cast<int>( LogLevel_e::Error )]
+			cerr << LOG_LEVEL_NAMES[LogLevel_e::Error]
 				 << "," << tl_t_name << ",日志入队失败,抛弃日志:"
 				 << body << endl;
 			return false;
@@ -364,8 +377,7 @@ void processLogs() {
 		aLog.body = "---------- 日志文件已轮转 ----------";
 	else if( s_headr_foot.load( mo_acquire ) )
 		aLog.body = "====== leonlog-" + string( PROJECT_VERSION ) + " 日志已启动("
-					+ string( LOG_LEVEL_NAMES[static_cast<int>( g_log_level )] )
-					+ ") ======";
+					+ LOG_LEVEL_NAMES[g_log_level] + ") ======";
 	writeLog( *s_log_ofs, aLog );
 	s_is_rolling.store( false, mo_release );
 	s_is_running.store( true, mo_release );
@@ -431,10 +443,10 @@ inline void writeLog( ofstream& p_out, const LogEntry_t& log ) {
 		p_out << '.' << formatNumber( sub_sec, s_stamp_pre, 0, 0, '0' );
 	}
 
-	p_out << ',' << LOG_LEVEL_NAMES[static_cast<int>( log.level )]
+	p_out << ',' << LOG_LEVEL_NAMES[log.level]
 		  << ',' << log.tname << ',' << log.body << "\n";
 
-	cerr << LOG_LEVEL_NAMES[static_cast<int>( log.level )]
+	cerr << LOG_LEVEL_NAMES[log.level]
 		 << ',' << log.tname << ',' << log.body << "\n";
 };
 
