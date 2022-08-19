@@ -77,7 +77,8 @@ int main( int argc, char** argv ) {
 		 << "\n持续时间:" << g_lasting << "s"
 		 << "\n队列长度:" << g_quesize << endl;
 
-	startLogging( g_app_name + ".log", LogLevel_e::Debug, g_stamp_p, g_quesize );
+	startLogging( g_app_name + ".log", LogLevel_e::Debug, g_stamp_p, g_quesize,
+				  true, true, true );
 
 	for( uint64_t k = 0; k < g_threads; ++k )
 		makers.emplace_back( thread( threadBody, k ) );

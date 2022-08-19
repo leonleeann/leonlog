@@ -108,7 +108,7 @@ unsigned int					s_exit_secs = 1;	// 单位:秒
 // 时戳精度(0~9代表精确到秒的几位小数)
 size_t							s_stamp_pre = 6;
 // 时戳单位(为了截断时戳到指定精度,每次要用的除数)
-uint64_t						s_time_unit;		//多少纳秒
+uint64_t						s_time_unit = 1;		//多少纳秒
 // 日志文件名, 包含全路径
 string							s_log_file;
 // 日志文件名中缀, 用于日志文件轮转
@@ -132,13 +132,17 @@ thread		s_writer;
 // 用于其它线程通知日志线程"新日志已入队"的信号量
 sem_t		s_new_log;
 // 是否正在进行日志文件轮转
-atomic_bool	s_is_rolling = { false };
+atomic_bool	s_is_rolling { false };
 // 指示writer线程是否还应继续运行的标志. 若将其置false, 日志线程将清空日志队列后退出
-atomic_bool	s_should_run = { false };
+atomic_bool	s_should_run { false };
 // 日志系统正在运行标志, 避免重复启动
-atomic_bool	s_is_running = { false };
+atomic_bool	s_is_running { false };
 // 要不要在启停时输出header/footer
-atomic_bool	s_headr_foot = { true };
+atomic_bool	s_headr_foot { true };
+// 是否同时输出至stdout
+bool		s_to_stdout { false };
+// 输出至stdout的内容是否也带时戳
+bool		s_sto_stamp { false };
 
 //###### 各种函数实现 ############################################################
 
@@ -162,7 +166,9 @@ extern "C" void startLogging( const string&	file_,
 							  LogLevel_e	levl_,
 							  size_t		prec_,
 							  size_t		capa_,
-							  bool			head_ ) {
+							  bool			head_,
+							  bool			stdo_,
+							  bool			stot_ ) {
 	if( s_is_running.load( mo_acquire ) )
 		throw bad_usage( "日志系统已启动, 不能重复初始化!" );
 
@@ -173,6 +179,8 @@ extern "C" void startLogging( const string&	file_,
 	s_log_file = file_;
 	s_log_que = make_unique<LogQue_t>( capa_ );
 	s_headr_foot.store( head_ );
+	s_to_stdout = stdo_;
+	s_sto_stamp = stot_;
 	if( sem_init( &s_new_log, 0, 0 ) )
 		throw std::runtime_error( "信号量创建失败, 不能启动日志系统!" );
 
@@ -428,26 +436,41 @@ void processLogs() {
 const char* const LOG_STAMP_FORMAT = "%y/%m/%d %H:%M:%S";
 
 inline void writeLog( ofstream& p_out, const LogEntry_t& log ) {
+
+	// 构造时戳
 	LogTimestamp_t tpSecPart =
 		time_point_cast<LogTimestamp_t::duration>(
 			std::chrono::floor<seconds>( log.stamp ) );
+	string time_str = formatTime( tpSecPart, LOG_STAMP_FORMAT );
 
-	// 输出时戳
-	p_out << formatTime( tpSecPart, LOG_STAMP_FORMAT );
+	// 输出时戳(尽量不拼接字符串,应该快点?)
+	p_out << time_str;
 
 	// 是否精确到秒以下
+	string nsec_str;
 	if( s_stamp_pre > 0 ) {
 		uint64_t sub_sec =
 			duration_cast<nanoseconds>( log.stamp - tpSecPart ).count();
 		sub_sec /= s_time_unit;
-		p_out << '.' << formatNumber( sub_sec, s_stamp_pre, 0, 0, '0' );
+		nsec_str = formatNumber( sub_sec, s_stamp_pre, 0, 0, '0' );
+		p_out << '.' << nsec_str;
 	}
 
 	p_out << ',' << LOG_LEVEL_NAMES[log.level]
 		  << ',' << log.tname << ',' << log.body << "\n";
 
-	cerr << LOG_LEVEL_NAMES[log.level]
-		 << ',' << log.tname << ',' << log.body << "\n";
+	// 要否也输出至stdout
+	if( !s_to_stdout )
+		return;
+	// 输出至stdout时还要不要时戳
+	if( s_sto_stamp ) {
+		std::cout << time_str;
+		if( s_stamp_pre > 0 )
+			std::cout << '.' << nsec_str;
+		std::cout << ',';
+	}
+	std::cout << LOG_LEVEL_NAMES[log.level]
+			  << ',' << log.tname << ',' << log.body << "\n";
 };
 
 void renameLogFile() {
