@@ -380,13 +380,14 @@ void processLogs() {
 	tsNextFlush.tv_sec += s_flush_secs;
 
 	LogEntry_t aLog { SysTimeNS_t::clock::now(), "Logger", {}, LogLevel_e::Notif, };
-//	LogEntry_t aLog; aLog.stamp = SysTimeNS_t::clock::now(); aLog.thrd = "Logger"; aLog.level  = LogLevel_e::Notif;
-	if( s_is_rolling.load( mo_acquire ) )
+	if( s_is_rolling.load( mo_acquire ) ) {
 		aLog.body = "---------- 日志文件已轮转 ----------";
-	else if( s_headr_foot.load( mo_acquire ) )
+		writeLog( *s_log_ofs, aLog );
+	} else if( s_headr_foot.load( mo_acquire ) ) {
 		aLog.body = "====== leonlog-" + string( PROJECT_VERSION ) + " 日志已启动("
 					+ LOG_LEVEL_NAMES[g_log_level] + ") ======";
-	writeLog( *s_log_ofs, aLog );
+		writeLog( *s_log_ofs, aLog );
+	}
 	s_is_rolling.store( false, mo_release );
 	s_is_running.store( true, mo_release );
 
@@ -421,12 +422,13 @@ void processLogs() {
 			if( s_log_que->deque( aLog ) )
 				writeLog( *s_log_ofs, aLog );
 
-		aLog.level = LogLevel_e::Notif;
-		aLog.tname = "Logger";
-		aLog.stamp = SysTimeNS_t::clock::now();
-		if( s_headr_foot.load( mo_acquire ) )
+		if( s_headr_foot.load( mo_acquire ) ) {
+			aLog.level = LogLevel_e::Notif;
+			aLog.tname = "Logger";
+			aLog.stamp = SysTimeNS_t::clock::now();
 			aLog.body = "================ 日志已停止 =================";
-		writeLog( *s_log_ofs, aLog );
+			writeLog( *s_log_ofs, aLog );
+		}
 	}
 
 	s_log_ofs->close();

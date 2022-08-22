@@ -34,7 +34,7 @@ target_link_libraries( d-log
 )
 install( TARGETS d-log RUNTIME DESTINATION testing )
 
-#[[======== test forking =====================
+#======== test forking =====================
 add_executable( testForking testForking.cpp )
 target_link_libraries( testForking
 	objCommon
@@ -43,4 +43,3 @@ target_link_libraries( testForking
 	target_static
 )
 install( TARGETS testForking RUNTIME DESTINATION testing )
-]]

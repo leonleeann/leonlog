@@ -16,36 +16,35 @@ using namespace std;
 
 int main( int argc, char** argv ) {
 	string app_name;
-
 	std::filesystem::path full_name { argv[0] };
 	app_name = full_name.stem();
 
 	cout << "pid:" << getpid()
-		 << "\n日志库版本:" << leon_log::getVersion()
-		 << "\n日志级别:" << LOG_LEVEL_NAMES[static_cast<int>( g_log_level )]
+		 << "\n日志库版本:" << leon_log::Version()
+		 << "\n日志级别:" << leon_log::LevelName( g_log_level )
 		 << endl;
 
-	startLogging( app_name + ".log", LogLevel_e::Debug, 3, 128 );
+	startLogging( app_name + ".log", LogLevel_e::Debug, 3, 128, true, true, true );
 	lg_note << "主日志开始...";
 // 	std::this_thread::sleep_for( 1s );
 // 	lg_note << "主进程退出";
 // 	stopLogging();
 // 	return EXIT_SUCCESS;
-// 	stopLogging();
 
+	stopLogging( false );
 	pid_t child = fork();
 	if( child < 0 ) {
-		lg_fatl << "fork失败!";
+		cerr << "fork失败!" << endl;
 		exit( EXIT_FAILURE );
 	}
 
 	if( child > 0 ) {
-// 		startLogging( app_name + ".log", LogLevel_e::Debug, 3, 128 );
+		startLogging( app_name + ".log", LogLevel_e::Debug, 3, 128, false, true, true );
 // 		lg_note << "主日志重启...";
 		lg_info << child << "子进程forked";
 // 		std::this_thread::sleep_for( 5s );
-		lg_note << "主进程退出";
-		stopLogging();
+		lg_note << "父进程退出";
+		stopLogging( true );
 		std::cerr << "父进程已退出" << getpid() << endl;
 		return EXIT_SUCCESS;
 	};
