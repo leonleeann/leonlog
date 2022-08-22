@@ -472,7 +472,7 @@ inline void writeLog( ofstream& p_out, const LogEntry_t& log ) {
 		std::cout << ',';
 	}
 	std::cout << LOG_LEVEL_NAMES[log.level]
-			  << ',' << log.tname << ',' << log.body << "\n";
+			  << ',' << log.tname << ',' << log.body << endl;
 };
 
 void renameLogFile() {
