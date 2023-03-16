@@ -102,9 +102,9 @@ void renameLogFile();
 LogLevel_e	g_log_level = LogLevel_e::Debug;
 
 // 写盘间隔(每隔多少秒确保保存一次)
-decltype( timespec::tv_sec )	s_flush_secs = 3;	// 单位:秒
+decltype( timespec::tv_sec )	s_flush_secs = 1;	// 单位:秒
 // 干掉日志线程之前等待多少秒
-unsigned int					s_exit_secs = 1;	// 单位:秒
+unsigned int					s_exit_secs = 3;	// 单位:秒
 // 时戳精度(0~9代表精确到秒的几位小数)
 size_t							s_stamp_pre = 6;
 // 时戳单位(为了截断时戳到指定精度,每次要用的除数)
@@ -217,7 +217,7 @@ extern "C" void stopLogging( bool footer_ ) {
 
 // 如果日志线程还在运行,就强制把它杀了
 	if( s_is_running.load( mo_acquire ) ) {
-		cerr << "====队内日志太多(" << s_log_que->size() << '/' << s_log_que->capacity()
+		cerr << "====队内日志太多(" << s_log_que->size() << '/' << s_log_que->capa()
 			 << "),写不完了.将要杀掉日志线程...====" << endl;
 		pthread_cancel( s_writer.native_handle() );
 		//s_writer.detach();
@@ -284,6 +284,7 @@ extern "C" bool appendLog( LogLevel_e level, const string& body ) {
 					tl_t_name, body, level, };
 	auto tries = ENQUE_RETRIES;
 	while( ! s_log_que->enque( le ) ) {
+		sem_post( &s_new_log );
 		--tries;
 		if( tries == 0 ) {
 			cerr << LOG_LEVEL_NAMES[LogLevel_e::Error]

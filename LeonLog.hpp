@@ -74,10 +74,10 @@ extern "C" void registThreadName( const std::string& );
 // 添加日志的主函数
 extern "C" bool appendLog( LogLevel_e level, const std::string& body );
 
-// 设置写盘间隔(每隔多少秒确保保存一次,默认3s)
+// 设置写盘间隔(每隔多少秒确保保存一次,默认1s)
 extern "C" void setFlushSeconds( unsigned int secs );  // 单位:秒
 
-// 设置退出等待时长(给日志线程多少时间清盘,默认1s)
+// 设置退出等待时长(给日志线程多少时间清盘,默认3s)
 extern "C" void setExitSeconds( unsigned int secs );  // 单位:秒
 
 // 设置一个存放时间戳的指针,之后输出日志时都会去那个地址找时戳

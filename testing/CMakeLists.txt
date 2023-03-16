@@ -4,7 +4,7 @@ project( test-log LANGUAGES CXX )
 
 add_library( objTestLog OBJECT testLogging.cpp )
 
-#[[======== 静态版 =====================
+#======== 静态版 =====================
 add_executable( s-log )
 target_link_libraries( s-log
 # 	objCommon
@@ -28,7 +28,7 @@ target_link_libraries( d-log
 )
 install( TARGETS d-log RUNTIME DESTINATION testing )
 
-#======== test forking =====================
+#[[======== test forking =====================
 add_executable( testForking testForking.cpp )
 target_link_libraries( testForking
 # 	objCommon

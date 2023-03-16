@@ -1,15 +1,15 @@
 cmake_minimum_required( VERSION 3.16.0 )
 
 set( PROJECT_VERSION_MAJOR 1 )   # 主版本
-set( PROJECT_VERSION_MINOR 6 )   # 次版本
-set( PROJECT_VERSION_PATCH 4 )   # 修订号(Bug fix)
+set( PROJECT_VERSION_MINOR 7 )   # 次版本
+set( PROJECT_VERSION_PATCH 0 )   # 修订号(Bug fix)
 
 # 版本全串
 set( PROJECT_VERSION
 	${PROJECT_VERSION_MAJOR}.${PROJECT_VERSION_MINOR}.${PROJECT_VERSION_PATCH})
 
 # 版本说明
-set( PROJECT_VERSION_NOTES "增加压力测试" )
+set( PROJECT_VERSION_NOTES "CraflinRQ改用Allocator" )
 
 # 项目描述
 set( PROJECT_DESCRIPTION   "线程安全的异步文件日志库" )
@@ -54,12 +54,12 @@ install( TARGETS target_static
 
 #======== 动态版 =====================
 add_library( target_dynmic SHARED LogToFile.cpp )
-set_target_properties(  target_dynmic PROPERTIES
-	OUTPUT_NAME_RELEASE  LeonLog
-	OUTPUT_NAME_DEBUG    LeonLog
-	PUBLIC_HEADER        ThreadName.hpp
-	VERSION              ${PROJECT_VERSION}
-	SOVERSION            ${PROJECT_VERSION_MAJOR}
+set_target_properties( target_dynmic PROPERTIES
+	OUTPUT_NAME_RELEASE    LeonLog
+	OUTPUT_NAME_DEBUG      LeonLog
+	PUBLIC_HEADER          ThreadName.hpp
+	VERSION                ${PROJECT_VERSION}
+	SOVERSION              ${PROJECT_VERSION_MAJOR}
 )
 target_link_libraries( target_dynmic objLeonExt Threads::Threads )
 install( TARGETS target_dynmic
