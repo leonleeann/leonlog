@@ -198,14 +198,18 @@ extern "C" void startLogging( const string&	file_,
 	}
 };
 
-extern "C" void stopLogging( bool footer_ ) {
+extern "C" void stopLogging( bool ft_, bool rn_, const string& infix_ ) {
 	if( !s_is_running.load( mo_acquire ) )
 // 		throw bad_usage( "日志系统尚未启动, 怎么关闭?" );
 		return;
 
-	if( footer_ )
+	if( ft_ )
 		LOG_NOTIF( "将要停止日志系统......" );
-	s_headr_foot.store( footer_, mo_release );
+
+// 本函数不会直接改名日志文件,只是置位全局变量,由日志线程完成真正的改名
+	s_headr_foot.store( ft_, mo_release );
+	s_log_infix = infix_;
+	s_is_rolling.store( rn_, mo_release );
 	s_should_run.store( false, mo_release );
 	steady_clock::time_point time_out =
 		steady_clock::now() + seconds( s_exit_secs );
@@ -220,14 +224,16 @@ extern "C" void stopLogging( bool footer_ ) {
 		cerr << "====队内日志太多(" << s_log_que->size() << '/' << s_log_que->capa()
 			 << "),写不完了.将要杀掉日志线程...====" << endl;
 		pthread_cancel( s_writer.native_handle() );
-		//s_writer.detach();
+		s_writer.detach();
+		s_is_running.store( false, mo_release );
 		cerr << "====日志线程已杀!!!====" << endl;
 	}
 
 #ifdef DEBUG
 	cerr << "joinning writer..." << endl;
 #endif
-	s_writer.join();
+	if( s_writer.joinable() )
+		s_writer.join();
 
 	if( sem_destroy( &s_new_log ) )
 		throw std::runtime_error( "信号量销毁失败!" );
@@ -326,8 +332,7 @@ extern "C" void setTimestampPtr( const LogTimestamp_t* tstamp ) {
 };
 
 extern "C" void rotateLog( const string& infix ) {
-// 本函数不是直接改名日志文件,只是置位全局变量,由日志线程完成真正的改名
-
+// 本函数不会直接改名日志文件,只是置位全局变量,由日志线程完成真正的改名
 // 先确保日志线程真的进入事件循环,否则它首次进入事件循环就会去轮转日志
 	steady_clock::time_point time_out = steady_clock::now() + 100ms;
 	while( !s_is_running.load( mo_acquire ) && steady_clock::now() < time_out )
@@ -371,7 +376,8 @@ void writerThreadBody() {
 };
 
 void processLogs() {
-	s_log_ofs = make_unique<ofstream>( s_log_file, std::ios_base::out | std::ios_base::app );
+	s_log_ofs = make_unique<ofstream>( s_log_file,
+                                       std::ios_base::out | std::ios_base::app );
 	s_log_ofs->imbue( std::locale( "C" ) );
 	s_log_ofs->clear();
 
@@ -409,7 +415,7 @@ void processLogs() {
 		}
 	}
 
-	if( s_is_rolling.load( mo_acquire ) ) {
+	if( s_should_run.load( mo_acquire ) ) {
 		// 这是需要轮转日志
 		aLog.level = LogLevel_e::Notif;
 		aLog.tname = "Logger";
@@ -484,6 +490,8 @@ void renameLogFile() {
 	char cSuf = 'a';
 	// 如果新起的文件名已被占用,就另想一个名字
 	while( std::filesystem::exists( newPath ) ) {
+		if( cSuf > 'z' )
+            return;
 		newPath = oldPath.parent_path() /
 				  ( oldPath.stem().string() + '-' + s_log_infix + cSuf++ );
 		newPath += oldPath.extension();

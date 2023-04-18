@@ -2,14 +2,14 @@ cmake_minimum_required( VERSION 3.16.0 )
 
 set( PROJECT_VERSION_MAJOR 1 )   # 主版本
 set( PROJECT_VERSION_MINOR 7 )   # 次版本
-set( PROJECT_VERSION_PATCH 1 )   # 修订号(Bug fix)
+set( PROJECT_VERSION_PATCH 2 )   # 修订号(Bug fix)
 
 # 版本全串
 set( PROJECT_VERSION
 	${PROJECT_VERSION_MAJOR}.${PROJECT_VERSION_MINOR}.${PROJECT_VERSION_PATCH})
 
 # 版本说明
-set( PROJECT_VERSION_NOTES "CraflinRQ::enque使用完美转发" )
+set( PROJECT_VERSION_NOTES "关闭的同时可以改名日志文件" )
 
 # 项目描述
 set( PROJECT_DESCRIPTION   "线程安全的异步文件日志库" )

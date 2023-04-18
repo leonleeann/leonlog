@@ -60,7 +60,11 @@ extern "C" void startLogging(
 );  // 队列容量
 
 // 关闭日志, 并Flush所有日志到磁盘
-extern "C" void stopLogging( bool footer = true ); // 停止时输出footer
+extern "C" void stopLogging(
+	bool footer = true,				// 是否在日志尾部输出 footer
+	bool rename = true,				// 关闭日志文件后是否改名
+	const std::string& infix = ""	// 改名的中缀
+);
 extern "C" bool logIsRunning();
 // 显示错误信息,关闭日志并退出
 extern "C" void exitWithLog( const std::string& );
@@ -160,3 +164,4 @@ inline Logger_t& operator<<( Logger_t& logger, const T& body ) {
 #endif
 
 };  // namespace leon_log
+// kate: indent-mode cstyle; indent-width 4; replace-tabs off; tab-width 4;
