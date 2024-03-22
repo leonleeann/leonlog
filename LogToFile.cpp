@@ -7,10 +7,11 @@
 #include <iomanip>
 #include <iostream>
 #include <memory>
+#include <mutex>
 #include <semaphore.h>
 #include <shared_mutex>
-#include <thread>
 #include <sys/syscall.h>   // SYS_gettid
+#include <thread>
 // #include <sys/types.h>  // pid_t
 #include <unistd.h>        // syscall
 
@@ -19,7 +20,7 @@
 #include "Version.hpp"
 #include "buffer/CraflinRQ.tpp"
 #include "chrono/Chrono.hpp"
-#include "common/event/MemoryOrder.hpp"
+#include "event/MemoryOrder.hpp"
 #include "misc/Exceptions.hpp"
 
 using namespace leon_ext;
@@ -483,20 +484,27 @@ inline void writeLog( ofstream& p_out, const LogEntry_t& log ) {
 };
 
 void renameLogFile() {
-	path  oldPath( s_log_file );
-	path  newPath = oldPath.parent_path() /
-					( oldPath.stem().string() + '-' + s_log_infix );
-	newPath += oldPath.extension();
-	char cSuf = 'a';
-	// 如果新起的文件名已被占用,就另想一个名字
-	while( std::filesystem::exists( newPath ) ) {
-		if( cSuf > 'z' )
-            return;
-		newPath = oldPath.parent_path() /
-				  ( oldPath.stem().string() + '-' + s_log_infix + cSuf++ );
-		newPath += oldPath.extension();
+	path	old_path( s_log_file );
+	if( std::filesystem::file_size( old_path ) == 0 ) {
+		// 1.7.3: 如果是空文件就删了
+		std::filesystem::remove( old_path );
+		return;
 	}
-	std::filesystem::rename( oldPath, newPath );
+
+	path	new_path = old_path.parent_path() /
+					( old_path.stem().string() + '-' + s_log_infix );
+	new_path += old_path.extension();
+
+	// 如果新起的文件名已被占用,就另想一个名字
+	char	suf_chr = 'a' - 1;
+	while( std::filesystem::exists( new_path ) ) {
+		if( ++suf_chr > 'z' )
+            return;
+		new_path = old_path.parent_path() /
+				  ( old_path.stem().string() + '-' + s_log_infix + suf_chr );
+		new_path += old_path.extension();
+	}
+	std::filesystem::rename( old_path, new_path );
 };
 
 }; // namespace leon_log
