@@ -1,6 +1,6 @@
 #pragma once
 #include <chrono>
-#include <sstream>      // ostringstream
+#include <sstream>		// ostringstream
 #include <string>
 
 namespace leon_log {
@@ -49,7 +49,7 @@ extern "C" const char* Version();
 extern "C" const char* LevelName( LogLevel_e );
 
 // 指定日志文件名, 启动日志系统
-extern "C" void startLogging(
+extern "C" void StartLogging(
 	const std::string&	log_file,						// 日志文件路径及名称
 	LogLevel_e			log_levl = LogLevel_e::Debug,	// 日志级别
 	size_t				stamp_precision = 6,			// 时戳精度
@@ -60,78 +60,74 @@ extern "C" void startLogging(
 );  // 队列容量
 
 // 关闭日志, 并Flush所有日志到磁盘
-extern "C" void stopLogging(
+extern "C" void StopLogging(
 	bool footer = true,				// 是否在日志尾部输出 footer
 	bool rename = true,				// 关闭日志文件后是否改名
 	const std::string& infix = ""	// 改名的中缀
 );
-extern "C" bool logIsRunning();
+extern "C" bool LogIsRunning();
 // 显示错误信息,关闭日志并退出
-extern "C" void exitWithLog( const std::string& );
+extern "C" void ExitWithLog( const std::string& );
 
 // 在fork后的子进程内关闭日志,因为此时没有writer线程,只能静默释放资源
 // extern "C" void _stopLogging();
 
 // 为当前线程登记一个名字,此后输出该线程的日志会包含此名，而非线程Id
-extern "C" void registThreadName( const std::string& );
+extern "C" void RegistThread( const std::string& );
 
 // 添加日志的主函数
-extern "C" bool appendLog( LogLevel_e level, const std::string& body );
+extern "C" bool AppendLog( LogLevel_e level, const std::string& body );
 
 // 设置写盘间隔(每隔多少秒确保保存一次,默认1s)
-extern "C" void setFlushSeconds( unsigned int secs );  // 单位:秒
+extern "C" void SetFlushSeconds( unsigned int secs );  // 单位:秒
 
 // 设置退出等待时长(给日志线程多少时间清盘,默认3s)
-extern "C" void setExitSeconds( unsigned int secs );  // 单位:秒
+extern "C" void SetExitSeconds( unsigned int secs );  // 单位:秒
 
 // 设置一个存放时间戳的指针,之后输出日志时都会去那个地址找时戳
-extern "C" void setTimestampPtr( const LogTimestamp_t* );
+extern "C" void SetLogStampPtr( const LogTimestamp_t* );
 
 // 轮转日志文件
-extern "C" void rotateLog( const std::string& infix /*中缀*/ );
+extern "C" void RotateLogFile( const std::string& infix /*中缀*/ );
 
 #ifdef DEBUG
 
-#define LOG_DEBUG( log_body ) ( g_log_level <= LogLevel_e::Debug && appendLog( LogLevel_e::Debug, std::string( __func__ ) + "()," + ( log_body ) ) )
-#define LOG_INFOR( log_body ) ( g_log_level <= LogLevel_e::Infor && appendLog( LogLevel_e::Infor, std::string( __func__ ) + "()," + ( log_body ) ) )
-#define LOG_NOTIF( log_body ) ( g_log_level <= LogLevel_e::Notif && appendLog( LogLevel_e::Notif, std::string( __func__ ) + "()," + ( log_body ) ) )
-#define LOG_WARNN( log_body ) ( g_log_level <= LogLevel_e::Warnn && appendLog( LogLevel_e::Warnn, std::string( __func__ ) + "()," + ( log_body ) ) )
-#define LOG_ERROR( log_body ) ( g_log_level <= LogLevel_e::Error && appendLog( LogLevel_e::Error, std::string( __func__ ) + "()," + ( log_body ) ) )
-#define LOG_FATAL( log_body ) ( g_log_level <= LogLevel_e::Fatal && appendLog( LogLevel_e::Fatal, std::string( __func__ ) + "()," + ( log_body ) ) )
+#define LOG_DEBUG( log_body ) ( g_log_level <= LogLevel_e::Debug && AppendLog( LogLevel_e::Debug, std::string( __func__ ) + "()," + ( log_body ) ) )
+#define LOG_INFOR( log_body ) ( g_log_level <= LogLevel_e::Infor && AppendLog( LogLevel_e::Infor, std::string( __func__ ) + "()," + ( log_body ) ) )
+#define LOG_NOTIF( log_body ) ( g_log_level <= LogLevel_e::Notif && AppendLog( LogLevel_e::Notif, std::string( __func__ ) + "()," + ( log_body ) ) )
+#define LOG_WARNN( log_body ) ( g_log_level <= LogLevel_e::Warnn && AppendLog( LogLevel_e::Warnn, std::string( __func__ ) + "()," + ( log_body ) ) )
+#define LOG_ERROR( log_body ) ( g_log_level <= LogLevel_e::Error && AppendLog( LogLevel_e::Error, std::string( __func__ ) + "()," + ( log_body ) ) )
+#define LOG_FATAL( log_body ) ( g_log_level <= LogLevel_e::Fatal && AppendLog( LogLevel_e::Fatal, std::string( __func__ ) + "()," + ( log_body ) ) )
 
 #else
 
-#define LOG_DEBUG( log_body ) ( g_log_level <= LogLevel_e::Debug && appendLog( LogLevel_e::Debug, ( log_body ) ) )
-#define LOG_INFOR( log_body ) ( g_log_level <= LogLevel_e::Infor && appendLog( LogLevel_e::Infor, ( log_body ) ) )
-#define LOG_NOTIF( log_body ) ( g_log_level <= LogLevel_e::Notif && appendLog( LogLevel_e::Notif, ( log_body ) ) )
-#define LOG_WARNN( log_body ) ( g_log_level <= LogLevel_e::Warnn && appendLog( LogLevel_e::Warnn, ( log_body ) ) )
-#define LOG_ERROR( log_body ) ( g_log_level <= LogLevel_e::Error && appendLog( LogLevel_e::Error, ( log_body ) ) )
-#define LOG_FATAL( log_body ) ( g_log_level <= LogLevel_e::Fatal && appendLog( LogLevel_e::Fatal, ( log_body ) ) )
+#define LOG_DEBUG( log_body ) ( g_log_level <= LogLevel_e::Debug && AppendLog( LogLevel_e::Debug, ( log_body ) ) )
+#define LOG_INFOR( log_body ) ( g_log_level <= LogLevel_e::Infor && AppendLog( LogLevel_e::Infor, ( log_body ) ) )
+#define LOG_NOTIF( log_body ) ( g_log_level <= LogLevel_e::Notif && AppendLog( LogLevel_e::Notif, ( log_body ) ) )
+#define LOG_WARNN( log_body ) ( g_log_level <= LogLevel_e::Warnn && AppendLog( LogLevel_e::Warnn, ( log_body ) ) )
+#define LOG_ERROR( log_body ) ( g_log_level <= LogLevel_e::Error && AppendLog( LogLevel_e::Error, ( log_body ) ) )
+#define LOG_FATAL( log_body ) ( g_log_level <= LogLevel_e::Fatal && AppendLog( LogLevel_e::Fatal, ( log_body ) ) )
 
 #endif
 
 class Logger_t : public std::ostringstream {
 public:
-	explicit Logger_t( LogLevel_e l ) : m_LogLevel( l ) {};
+	explicit Logger_t( LogLevel_e l ) : _level( l ) {};
 
 	// 释放本对象时一并输出,且本类可派生
-	~Logger_t() override {
-		appendLog( m_LogLevel, str() );
-	};
+	~Logger_t() override { AppendLog( _level, str() ); };
 
-	inline operator bool() {
-		return m_LogLevel >= g_log_level;
-	};
+	operator bool() { return _level >= g_log_level; };
 
 	// 把属性公开之后,就不需要后面那一堆友元函数了.关键是,用户自定义类型也可流式输出了!
-	LogLevel_e m_LogLevel;
+	LogLevel_e _level;
 };
 
 template <typename T>
-inline Logger_t& operator<<( Logger_t& logger, const T& body ) {
+inline Logger_t& operator<<( Logger_t& logger_, const T& body ) {
 
-	if( logger.m_LogLevel >= g_log_level )
-		static_cast<std::ostringstream&>( logger ) << ( body );
+	if( logger_._level >= g_log_level )
+		static_cast<std::ostringstream&>( logger_ ) << ( body );
 
 // 很多自定义类(包括STL内的)会重载(overloading) << 运算符,以便输出自己,所以不可能直接
 // 调用 ostream::operator<<() 的方法(以下都不好):
@@ -140,7 +136,7 @@ inline Logger_t& operator<<( Logger_t& logger, const T& body ) {
 // dynamic_cast<std::ostringstream&>( logger ) << body;
 // return std::ostringstream::operator<<( body );
 
-	return logger;
+	return logger_;
 };
 
 #ifdef DEBUG

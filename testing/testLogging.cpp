@@ -39,7 +39,7 @@ void threadBody( uint64_t p_uiMyId ) {
 // LogTimestamp_t tstamp;
 // setTimestampPtr( &tstamp );
 	string myName = string( "线程" ) + to_string( p_uiMyId );
-	registThreadName( myName );
+	RegistThread( myName );
 	auto t_id = leon_log::getLinuxThreadIds()[myName];
 	lg_debg << "[" << t_id << "]:开始了!";
 	string_view sv { myName.c_str() };
@@ -77,7 +77,7 @@ int main( int argc, char** argv ) {
 		 << "\n持续时间:" << g_lasting << "s"
 		 << "\n队列长度:" << g_quesize << endl;
 
-	startLogging( g_app_name + ".log", LogLevel_e::Debug, g_stamp_p, g_quesize,
+	StartLogging( g_app_name + ".log", LogLevel_e::Debug, g_stamp_p, g_quesize,
 				  true, true, true );
 
 	for( uint64_t k = 0; k < g_threads; ++k )
@@ -137,7 +137,7 @@ int main( int argc, char** argv ) {
 	for( const auto& [n, i] : leon_log::getLinuxThreadIds() )
 		lg_erro << n << ":[" << i << "]." << endl;
 
-	stopLogging();
+	StopLogging();
 	cout << "系统正常退出." << endl;
 	return EXIT_SUCCESS;
 };

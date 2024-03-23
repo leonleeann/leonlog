@@ -24,7 +24,7 @@ int main( int argc, char** argv ) {
 		 << "\n日志级别:" << leon_log::LevelName( g_log_level )
 		 << endl;
 
-	startLogging( app_name + ".log", LogLevel_e::Debug, 9, 128, true, true, true );
+	StartLogging( app_name + ".log", LogLevel_e::Debug, 9, 128, true, true, true );
 	lg_note << "主日志开始...";
 // 	std::this_thread::sleep_for( 1s );
 // 	lg_note << "主进程退出";
@@ -39,7 +39,7 @@ int main( int argc, char** argv ) {
 	}
 
 	if( child > 0 ) {
-		startLogging( app_name + ".log", LogLevel_e::Debug, 9, 128, false, true, true );
+		StartLogging( app_name + ".log", LogLevel_e::Debug, 9, 128, false, true, true );
 // 		lg_note << "主日志重启...";
 		lg_info << child << "子进程forked";
 // 		std::this_thread::sleep_for( 5s );

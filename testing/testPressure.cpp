@@ -41,7 +41,7 @@ int main( int argc, char** argv ) {
 		 << "\n日志级别:" << leon_log::LevelName( s_log_level )
 		 << endl;
 
-	startLogging( app_name + ".log", LogLevel_e::Debug, 9, 1024 * 1024, true, false );
+	StartLogging( app_name + ".log", LogLevel_e::Debug, 9, 1024 * 1024, true, false );
 	lg_note << "主日志开始...";
 
 	for( int i = 0; i < s_thread_count; ++i )
@@ -50,17 +50,17 @@ int main( int argc, char** argv ) {
 		rnr.join();
 
 	lg_note << "主进程退出";
-	stopLogging();
+	StopLogging();
 	return EXIT_SUCCESS;
 };
 
 void threadBody( int my_id ) {
-	registThreadName( "runner" + formatNumber(my_id, 2, 0, 0, '0' ) );
+	RegistThread( "runner" + formatNumber(my_id, 2, 0, 0, '0' ) );
 
 	int count = 0;
 	auto start_time = steady_clock::now();
 	while( steady_clock::now() < s_end_time ) {
-		if( ! appendLog( LogLevel_e::Debug, std::to_string( count ) ) )
+		if( ! AppendLog( LogLevel_e::Debug, std::to_string( count ) ) )
 			break;
 
 		++count;
@@ -93,9 +93,9 @@ void parseCmdLineOpts( int argc, const char* const* const args ) {
 			if( !( opt_err = ++i >= argc ) )
 				s_sleep_nanos = atoi( args[i] );
 		} else
-			exitWithLog( '"' + argv + "\"是无法识别的选项,无法继续!" );
+			ExitWithLog( '"' + argv + "\"是无法识别的选项,无法继续!" );
 	};
 
 	if( opt_err )
-		exitWithLog( "选项错误,无法继续!" );
+		ExitWithLog( "选项错误,无法继续!" );
 };

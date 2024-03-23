@@ -83,19 +83,19 @@ constexpr unsigned int ENQUE_RETRIES = 10;
 //###### 各种函数前置申明 #########################################################
 
 // 返回16进制串表达的线程Id
-string thrdId2Hex( thread::id my_id = std::this_thread::get_id() );
+string ThreadId2Hex( thread::id my_id = std::this_thread::get_id() );
 
 // 写日志的线程体
-void writerThreadBody();
+void WriterThreadBody();
 
 // 日志线程的核心工作：出队日志，写日志
-void processLogs();
+void ProcessLogs();
 
 // 写一条日志
-void writeLog( ofstream&, const LogEntry_t& );
+void Write1Log( ofstream&, const LogEntry_t& );
 
 // 完成一次日志轮转(将当前日志文件保存、关闭、改名)
-void renameLogFile();
+void RenameLogFile();
 
 //###### 各种变量 ###############################################################
 
@@ -116,7 +116,7 @@ string							s_log_file;
 string							s_log_infix;
 
 // 给每个线程起个名字,输出的日志内能够看出每条日志都是由谁产生的
-thread_local string				tl_t_name = thrdId2Hex();
+thread_local string				tl_t_name = ThreadId2Hex();
 Names2LinuxTId_t				s_t_ids;		// 线程名到t_id的映射
 shared_mutex					s_mtx4nids;		// 更新s_t_ids时的同步控制
 
@@ -147,7 +147,7 @@ bool		s_sto_stamp { false };
 
 //###### 各种函数实现 ############################################################
 
-inline string thrdId2Hex( thread::id thread_id ) {
+inline string ThreadId2Hex( thread::id thread_id ) {
 	ostringstream oss;
 	oss << std::hex << thread_id;
 	return oss.str();
@@ -163,7 +163,7 @@ extern "C" const char* LevelName( LogLevel_e ll ) {
 	return LOG_LEVEL_NAMES[ll].c_str();
 };
 
-extern "C" void startLogging( const string&	file_,
+extern "C" void StartLogging( const string&	file_,
 							  LogLevel_e	levl_,
 							  size_t		prec_,
 							  size_t		capa_,
@@ -185,9 +185,9 @@ extern "C" void startLogging( const string&	file_,
 	if( sem_init( &s_new_log, 0, 0 ) )
 		throw std::runtime_error( "信号量创建失败, 不能启动日志系统!" );
 
-	registThreadName( "MainThread" );
+	RegistThread( "MainThread" );
 	s_should_run.store( true, mo_release );
-	s_writer = std::thread( writerThreadBody );
+	s_writer = std::thread( WriterThreadBody );
 	steady_clock::time_point time_out = steady_clock::now() + 1s;
 	while( !s_is_running.load( mo_acquire ) && steady_clock::now() < time_out )
 		std::this_thread::sleep_for( 1ns );
@@ -199,7 +199,7 @@ extern "C" void startLogging( const string&	file_,
 	}
 };
 
-extern "C" void stopLogging( bool ft_, bool rn_, const string& infix_ ) {
+extern "C" void StopLogging( bool ft_, bool rn_, const string& infix_ ) {
 	if( !s_is_running.load( mo_acquire ) )
 // 		throw bad_usage( "日志系统尚未启动, 怎么关闭?" );
 		return;
@@ -240,16 +240,16 @@ extern "C" void stopLogging( bool ft_, bool rn_, const string& infix_ ) {
 		throw std::runtime_error( "信号量销毁失败!" );
 };
 
-extern "C" bool logIsRunning() {
+extern "C" bool LogIsRunning() {
 	return s_is_running.load( mo_acquire );
 };
 
-extern "C" void exitWithLog( const std::string& err ) {
+extern "C" void ExitWithLog( const std::string& err ) {
 	std::cerr << err << std::endl;
 
 	if( s_is_running.load( mo_acquire ) ) {
-		appendLog( LogLevel_e::Fatal, err );
-		stopLogging();
+		AppendLog( LogLevel_e::Fatal, err );
+		StopLogging();
 	}
 	exit( EXIT_FAILURE );
 };
@@ -274,7 +274,7 @@ extern "C" void exitWithLog( const std::string& err ) {
 }; */
 
 // 添加日志的主函数, 此处是实现。此函数只是把日志加入队列, 等待日志线程来写入文件
-extern "C" bool appendLog( LogLevel_e level, const string& body ) {
+extern "C" bool AppendLog( LogLevel_e level, const string& body ) {
 	// 只有不低于门限值的日志才能得到输出
 	if( level < g_log_level )
 		return false;
@@ -306,7 +306,7 @@ extern "C" bool appendLog( LogLevel_e level, const string& body ) {
 	return true;
 };
 
-extern "C" void registThreadName( const string& my_name ) {
+extern "C" void RegistThread( const string& my_name ) {
 // 登记一个线程名, 此后输出该线程的日志时, 会包含此名，而非线程Id
 	tl_t_name = my_name;
 	unique_lock<shared_mutex> ex_lk( s_mtx4nids );
@@ -319,20 +319,20 @@ extern Names2LinuxTId_t getLinuxThreadIds() {
 };
 
 // 设置写盘间隔(每隔多少秒确保保存一次,默认3s)
-extern "C" void setFlushSeconds( unsigned int secs ) {
+extern "C" void SetFlushSeconds( unsigned int secs ) {
 	s_flush_secs = secs;
 };
 
 // 设置退出等待时长(给日志线程多少时间清盘,默认1s)
-extern "C" void setExitSeconds( unsigned int secs ) {
+extern "C" void SetExitSeconds( unsigned int secs ) {
 	s_exit_secs = secs;
 };
 
-extern "C" void setTimestampPtr( const LogTimestamp_t* tstamp ) {
+extern "C" void SetLogStampPtr( const LogTimestamp_t* tstamp ) {
 	tl_stamp = tstamp;
 };
 
-extern "C" void rotateLog( const string& infix ) {
+extern "C" void RotateLogFile( const string& infix ) {
 // 本函数不会直接改名日志文件,只是置位全局变量,由日志线程完成真正的改名
 // 先确保日志线程真的进入事件循环,否则它首次进入事件循环就会去轮转日志
 	steady_clock::time_point time_out = steady_clock::now() + 100ms;
@@ -354,7 +354,7 @@ extern "C" void rotateLog( const string& infix ) {
 	}
 };
 
-void writerThreadBody() {
+void WriterThreadBody() {
 	/* 如果本系统已被海量的日志淹没,日志线程会需要很久才能写完退出(尤其是日志队列用得很大时),
 	 * 导致本系统停止失败。 所以日志线程设置为可以立即终止。
 	int old_state = 0, old_type = 0;
@@ -363,22 +363,28 @@ void writerThreadBody() {
 	 */
 
 	// 日志线程自己也可以添加日志,当然就也可以注册有意义的线程名称
-	registThreadName( "Logger" );
+	RegistThread( "Logger" );
 
 	while( s_should_run.load( mo_acquire ) ) {
-		processLogs();
+		ProcessLogs();
 
-		// 如果退出信号量循环,有可能就是为了轮转日志
-		if( s_is_rolling.load( mo_acquire ) )
-			renameLogFile();
+		path tmp = path( s_log_file );
+		if( exists( tmp ) ) {
+			if( file_size( tmp ) == 0 )
+				// 删除空日志文件
+				remove( tmp );
+
+			else if( s_is_rolling.load( mo_acquire ) )
+				RenameLogFile();
+		}
 	}
 
 	s_is_running.store( false, mo_release );
 };
 
-void processLogs() {
+void ProcessLogs() {
 	s_log_ofs = make_unique<ofstream>( s_log_file,
-                                       std::ios_base::out | std::ios_base::app );
+									   std::ios_base::out | std::ios_base::app );
 	s_log_ofs->imbue( std::locale( "C" ) );
 	s_log_ofs->clear();
 
@@ -390,11 +396,11 @@ void processLogs() {
 	LogEntry_t aLog { SysTimeNS_t::clock::now(), "Logger", {}, LogLevel_e::Notif, };
 	if( s_is_rolling.load( mo_acquire ) ) {
 		aLog.body = "---------- 日志文件已轮转 ----------";
-		writeLog( *s_log_ofs, aLog );
+		Write1Log( *s_log_ofs, aLog );
 	} else if( s_headr_foot.load( mo_acquire ) ) {
 		aLog.body = "====== leonlog-" + string( PROJECT_VERSION ) + " 日志已启动("
 					+ LOG_LEVEL_NAMES[g_log_level] + ") ======";
-		writeLog( *s_log_ofs, aLog );
+		Write1Log( *s_log_ofs, aLog );
 	}
 	s_is_rolling.store( false, mo_release );
 	s_is_running.store( true, mo_release );
@@ -405,7 +411,7 @@ void processLogs() {
 		sem_timedwait( &s_new_log, &tsNextFlush );
 
 		while( s_log_que->deque( aLog ) )
-			writeLog( *s_log_ofs, aLog );
+			Write1Log( *s_log_ofs, aLog );
 
 		// 每1秒Flush一下
 		timespec_get( &tsNow, TIME_UTC );
@@ -422,20 +428,20 @@ void processLogs() {
 		aLog.tname = "Logger";
 		aLog.stamp = SysTimeNS_t::clock::now();
 		aLog.body = "---------- 日志文件将轮转 ----------";
-		writeLog( *s_log_ofs, aLog );
+		Write1Log( *s_log_ofs, aLog );
 	} else {
 		// 开始清盘, 如果此时日志还在源源不断地入队, 就会导致我们停不下来!
 		// 所以在 stopLogging 函数内会杀掉本线程!
 		while( s_log_que->size() > 0 )
 			if( s_log_que->deque( aLog ) )
-				writeLog( *s_log_ofs, aLog );
+				Write1Log( *s_log_ofs, aLog );
 
 		if( s_headr_foot.load( mo_acquire ) ) {
 			aLog.level = LogLevel_e::Notif;
 			aLog.tname = "Logger";
 			aLog.stamp = SysTimeNS_t::clock::now();
 			aLog.body = "================ 日志已停止 =================";
-			writeLog( *s_log_ofs, aLog );
+			Write1Log( *s_log_ofs, aLog );
 		}
 	}
 
@@ -445,7 +451,7 @@ void processLogs() {
 
 const char* const LOG_STAMP_FORMAT = "%y/%m/%d %H:%M:%S";
 
-inline void writeLog( ofstream& p_out, const LogEntry_t& log ) {
+inline void Write1Log( ofstream& p_out, const LogEntry_t& log ) {
 
 	// 构造时戳
 	LogTimestamp_t tpSecPart =
@@ -483,28 +489,26 @@ inline void writeLog( ofstream& p_out, const LogEntry_t& log ) {
 			  << ',' << log.tname << ',' << log.body << endl;
 };
 
-void renameLogFile() {
+void RenameLogFile() {
 	path	old_path( s_log_file );
-	if( std::filesystem::file_size( old_path ) == 0 ) {
-		// 1.7.3: 如果是空文件就删了
-		std::filesystem::remove( old_path );
-		return;
-	}
-
 	path	new_path = old_path.parent_path() /
-					( old_path.stem().string() + '-' + s_log_infix );
+					   ( old_path.stem().string() + '-' + s_log_infix );
 	new_path += old_path.extension();
 
 	// 如果新起的文件名已被占用,就另想一个名字
 	char	suf_chr = 'a' - 1;
-	while( std::filesystem::exists( new_path ) ) {
-		if( ++suf_chr > 'z' )
-            return;
+	while( exists( new_path ) ) {
+		if( ++suf_chr > 'z' ) {
+			cerr << "改名日志文件(" << old_path
+				 << ")失败,期望文件名(" << new_path << ")已存在!";
+			return;
+		}
 		new_path = old_path.parent_path() /
-				  ( old_path.stem().string() + '-' + s_log_infix + suf_chr );
+				   ( old_path.stem().string() + '-' + s_log_infix + suf_chr );
 		new_path += old_path.extension();
 	}
-	std::filesystem::rename( old_path, new_path );
+	rename( old_path, new_path );
 };
 
 }; // namespace leon_log
+// kate: indent-mode cstyle; indent-width 4; replace-tabs off; tab-width 4;
