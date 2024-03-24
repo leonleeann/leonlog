@@ -369,10 +369,11 @@ void WriterThreadBody() {
 		ProcessLogs();
 
 		path tmp = path( s_log_file );
-		if( exists( tmp ) ) {
+		if( s_log_file != "/dev/null" && exists( tmp ) ) {
 			if( file_size( tmp ) == 0 )
-				// 删除空日志文件
-				remove( tmp );
+				try { remove( tmp ); } catch( const std::exception& e ) {
+					cerr << "删除空文件(" << tmp << ")甩出异常:" << e.what();
+				}
 
 			else if( s_is_rolling.load( mo_acquire ) )
 				RenameLogFile();
