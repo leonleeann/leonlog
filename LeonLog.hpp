@@ -2,6 +2,7 @@
 #include <chrono>
 #include <sstream>		// ostringstream
 #include <string>
+#include <type_traits>
 
 namespace leon_log {
 
@@ -110,12 +111,12 @@ extern "C" void RotateLogFile( const std::string& infix /*中缀*/ );
 
 #endif
 
-class Logger_t : public std::ostringstream {
+class Log_t: public std::ostringstream {
 public:
-	explicit Logger_t( LogLevel_e l ) : _level( l ) {};
+	explicit Log_t( LogLevel_e l ) : _level( l ) {};
 
 	// 释放本对象时一并输出,且本类可派生
-	~Logger_t() override { AppendLog( _level, str() ); };
+	~Log_t() override { AppendLog( _level, str() ); };
 
 	operator bool() { return _level >= g_log_level; };
 
@@ -123,41 +124,92 @@ public:
 	LogLevel_e _level;
 };
 
-template <typename T>
-inline Logger_t& operator<<( Logger_t& logger_, const T& body ) {
+// 指针概念
+template<typename T>
+concept AnyPtr =
+	( std::is_pointer_v<std::remove_cvref_t<T>> ||
+	  std::is_null_pointer_v<std::remove_cvref_t<T>> ) &&
+	!( std::is_same_v<std::remove_pointer_t<std::remove_cvref_t<T>>, char> ||
+	   std::is_same_v<std::remove_cvref_t<std::remove_pointer_t<T>>, char> ) &&
+	!( std::is_same_v<std::remove_pointer_t<std::remove_cvref_t<T>>, void> ||
+	   std::is_same_v<std::remove_cvref_t<std::remove_pointer_t<T>>, void> );
 
-	if( logger_._level >= g_log_level )
-		static_cast<std::ostringstream&>( logger_ ) << ( body );
+// 非指针概念
+template<typename T>
+concept NonPtr =
+	std::is_same_v<std::remove_pointer_t<std::remove_cvref_t<T>>, T>&&
+	!std::is_same_v<std::remove_pointer_t<std::remove_cvref_t<T>>, char>&&
+	!std::is_same_v<std::remove_cvref_t<std::remove_pointer_t<T>>, char>&&
+	!std::is_same_v<std::remove_pointer_t<std::remove_cvref_t<T>>, void>&&
+	!std::is_same_v<std::remove_cvref_t<std::remove_pointer_t<T>>, void>;
 
-// 很多自定义类(包括STL内的)会重载(overloading) << 运算符,以便输出自己,所以不可能直接
-// 调用 ostream::operator<<() 的方法(以下都不好):
-// static_cast<std::ostringstream&>( logger ).operator<<( body );
-// dynamic_cast<std::ostringstream&>( logger ).operator<<( body );
-// dynamic_cast<std::ostringstream&>( logger ) << body;
-// return std::ostringstream::operator<<( body );
+// char* 是指针, 但不应该解引输出, 只好单做一个非模板的函数
+inline Log_t& operator<<( Log_t& log_, const char* str_ ) {
+	if( log_._level < g_log_level )
+		return log_;
 
-	return logger_;
+	if( str_ == nullptr )
+		static_cast<std::ostringstream&>( log_ ) << "{null-char*}";
+	else
+		static_cast<std::ostringstream&>( log_ ) << str_;
+	return log_;
+};
+
+// void* 同理
+inline Log_t& operator<<( Log_t& log_, const void* ptr_ ) {
+	if( log_._level < g_log_level )
+		return log_;
+
+	if( ptr_ == nullptr )
+		static_cast<std::ostringstream&>( log_ ) << "{null-void*}";
+	else
+		static_cast<std::ostringstream&>( log_ ) << std::hex << ptr_;
+	return log_;
+};
+
+template <NonPtr T>
+inline Log_t& operator<<( Log_t& log_, const T& body_ ) {
+
+	if( log_._level >= g_log_level )
+		static_cast<std::ostringstream&>( log_ ) << body_;
+
+	return log_;
+};
+
+template <AnyPtr T>
+inline Log_t& operator<<( Log_t& log_, T body_ ) {
+
+	if( log_._level < g_log_level )
+		return log_;
+
+	if( body_ == nullptr )
+		static_cast<std::ostringstream&>( log_ ) << "{nullptr}";
+	else
+		static_cast<std::ostringstream&>( log_ ) << *body_;
+
+	return log_;
 };
 
 #ifdef DEBUG
 
-#define lg_debg g_log_level <= LogLevel_e::Debug && Logger_t(LogLevel_e::Debug) << __func__ << "(),"
-#define lg_info g_log_level <= LogLevel_e::Infor && Logger_t(LogLevel_e::Infor) << __func__ << "(),"
-#define lg_note g_log_level <= LogLevel_e::Notif && Logger_t(LogLevel_e::Notif) << __func__ << "(),"
-#define lg_warn g_log_level <= LogLevel_e::Warnn && Logger_t(LogLevel_e::Warnn) << __func__ << "(),"
-#define lg_erro g_log_level <= LogLevel_e::Error && Logger_t(LogLevel_e::Error) << __func__ << "(),"
-#define lg_fatl g_log_level <= LogLevel_e::Fatal && Logger_t(LogLevel_e::Fatal) << __func__ << "(),"
+#define lg_debg g_log_level <= LogLevel_e::Debug && Log_t(LogLevel_e::Debug) << __func__ << "(),"
+#define lg_info g_log_level <= LogLevel_e::Infor && Log_t(LogLevel_e::Infor) << __func__ << "(),"
+#define lg_note g_log_level <= LogLevel_e::Notif && Log_t(LogLevel_e::Notif) << __func__ << "(),"
+#define lg_warn g_log_level <= LogLevel_e::Warnn && Log_t(LogLevel_e::Warnn) << __func__ << "(),"
+#define lg_erro g_log_level <= LogLevel_e::Error && Log_t(LogLevel_e::Error) << __func__ << "(),"
+#define lg_fatl g_log_level <= LogLevel_e::Fatal && Log_t(LogLevel_e::Fatal) << __func__ << "(),"
 
 #else
 
-#define lg_debg g_log_level <= LogLevel_e::Debug && Logger_t(LogLevel_e::Debug)
-#define lg_info g_log_level <= LogLevel_e::Infor && Logger_t(LogLevel_e::Infor)
-#define lg_note g_log_level <= LogLevel_e::Notif && Logger_t(LogLevel_e::Notif)
-#define lg_warn g_log_level <= LogLevel_e::Warnn && Logger_t(LogLevel_e::Warnn)
-#define lg_erro g_log_level <= LogLevel_e::Error && Logger_t(LogLevel_e::Error)
-#define lg_fatl g_log_level <= LogLevel_e::Fatal && Logger_t(LogLevel_e::Fatal)
+#define lg_debg g_log_level <= LogLevel_e::Debug && Log_t(LogLevel_e::Debug)
+#define lg_info g_log_level <= LogLevel_e::Infor && Log_t(LogLevel_e::Infor)
+#define lg_note g_log_level <= LogLevel_e::Notif && Log_t(LogLevel_e::Notif)
+#define lg_warn g_log_level <= LogLevel_e::Warnn && Log_t(LogLevel_e::Warnn)
+#define lg_erro g_log_level <= LogLevel_e::Error && Log_t(LogLevel_e::Error)
+#define lg_fatl g_log_level <= LogLevel_e::Fatal && Log_t(LogLevel_e::Fatal)
 
 #endif
 
 };  // namespace leon_log
+
 // kate: indent-mode cstyle; indent-width 4; replace-tabs off; tab-width 4;

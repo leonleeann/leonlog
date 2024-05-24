@@ -2,9 +2,15 @@ cmake_minimum_required( VERSION 3.16.0 )
 
 project( test-log LANGUAGES CXX )
 
-add_library( objTestLog OBJECT testLogging.cpp )
+#======== 单元测试 ===================
+add_executable( ut-leonlog UnitTestMain.cpp )
+target_link_libraries( ut-leonlog
+	${GTEST_BOTH_LIBRARIES} ${GMOCK_BOTH_LIBRARIES}
+)
+install( TARGETS ut-leonlog RUNTIME DESTINATION testing )
 
 #======== 静态版 =====================
+add_library( objTestLog OBJECT testLogging.cpp )
 add_executable( s-log )
 target_link_libraries( s-log
 # 	objCommon
@@ -31,7 +37,7 @@ install( TARGETS d-log RUNTIME DESTINATION testing )
 #[[======== test forking =====================
 add_executable( testForking testForking.cpp )
 target_link_libraries( testForking
-# 	objCommon
+#	objCommon
 	objLeonExt
 	Threads::Threads
 	"stdc++fs"

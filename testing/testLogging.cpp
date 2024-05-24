@@ -30,7 +30,7 @@ string   g_app_name;
 uint64_t g_stamp_p = 6;
 uint64_t g_threads = 2;
 uint64_t g_intervl = 100000;
-uint64_t g_lasting = 10;
+uint64_t g_lasting = 3;
 uint64_t g_quesize = 1024;
 atomic_bool g_should_run = { true };
 std::vector<thread> makers;
