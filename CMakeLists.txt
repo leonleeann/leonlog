@@ -1,15 +1,15 @@
 cmake_minimum_required( VERSION 3.16.0 )
 
 set( PROJECT_VERSION_MAJOR 1 )   # 主版本
-set( PROJECT_VERSION_MINOR 7 )   # 次版本
-set( PROJECT_VERSION_PATCH 6 )   # 修订号(Bug fix)
+set( PROJECT_VERSION_MINOR 8 )   # 次版本
+set( PROJECT_VERSION_PATCH 0 )   # 修订号(Bug fix)
 
 # 版本全串
 set( PROJECT_VERSION
 	${PROJECT_VERSION_MAJOR}.${PROJECT_VERSION_MINOR}.${PROJECT_VERSION_PATCH})
 
 # 版本说明
-set( PROJECT_VERSION_NOTES "Bugfix_终于解决了输出指针而非内容的问题" )
+set( PROJECT_VERSION_NOTES "适配octopus7" )
 
 # 项目描述
 set( PROJECT_DESCRIPTION   "线程安全的异步文件日志库" )
@@ -22,8 +22,7 @@ project( LeonLog
 
 # 用环境变量指定octopus源码树不好,因为会影响全系统所有项目(包括new_arch)。
 # set( OCTOPUS_CODE_BASE $ENV{OCTOPUS_CODE_BASE} )
-set( OCTOPUS_CODE_BASE "/data/projects/producing" )
-message( STATUS "要用生产环境的源码树!!!:\"${OCTOPUS_CODE_BASE}\"" )
+set( OCTOPUS_CODE_BASE "/data/projects/octopus" )
 configure_file( ${OCTOPUS_CODE_BASE}/common/version/Version.hpp.in Version.hpp )
 include( ${OCTOPUS_CODE_BASE}/common/OctopusCommon.cmake )
 set( CMAKE_INCLUDE_CURRENT_DIR ON )

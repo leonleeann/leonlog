@@ -394,7 +394,7 @@ void ProcessLogs() {
 	timespec_get( &tsNextFlush, TIME_UTC );
 	tsNextFlush.tv_sec += s_flush_secs;
 
-	LogEntry_t aLog { SysTimeNS_t::clock::now(), "Logger", {}, LogLevel_e::Notif, };
+	LogEntry_t aLog { system_clock::now(), "Logger", {}, LogLevel_e::Notif, };
 	if( s_is_rolling.load( mo_acquire ) ) {
 		aLog.body = "---------- 日志文件已轮转 ----------";
 		Write1Log( *s_log_ofs, aLog );
@@ -427,7 +427,7 @@ void ProcessLogs() {
 		// 这是需要轮转日志
 		aLog.level = LogLevel_e::Notif;
 		aLog.tname = "Logger";
-		aLog.stamp = SysTimeNS_t::clock::now();
+		aLog.stamp = system_clock::now();
 		aLog.body = "---------- 日志文件将轮转 ----------";
 		Write1Log( *s_log_ofs, aLog );
 	} else {
@@ -440,7 +440,7 @@ void ProcessLogs() {
 		if( s_headr_foot.load( mo_acquire ) ) {
 			aLog.level = LogLevel_e::Notif;
 			aLog.tname = "Logger";
-			aLog.stamp = SysTimeNS_t::clock::now();
+			aLog.stamp = system_clock::now();
 			aLog.body = "================ 日志已停止 =================";
 			Write1Log( *s_log_ofs, aLog );
 		}
