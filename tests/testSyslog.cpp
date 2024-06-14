@@ -3,13 +3,12 @@
 #include <forward_list>
 #include <iomanip>
 #include <iostream>
+#include <leonutils/Converts.hpp>
 #include <syslog.h>
 #include <thread>
 #include <unistd.h>
 
-#include "misc/Converts.hpp"
-
-using namespace leon_ext;
+using namespace leon_utl;
 using namespace std::chrono;
 using namespace std;
 
@@ -49,7 +48,7 @@ int main( int argc, char** argv ) {
 };
 
 void threadBody( int my_id ) {
-	string my_name = "runner" + formatNumber( my_id, 2, 0, 0, '0' );
+	string my_name = "runner" + format( my_id, 2, 0, 0, '0' );
 	auto module_id = LOG_LOCAL0 + my_id;
 	openlog( my_name.c_str(), LOG_CONS | LOG_NDELAY | LOG_PID, module_id );
 
@@ -67,7 +66,7 @@ void threadBody( int my_id ) {
 	syslog( module_id | LOG_NOTICE, "我已退出:%f", write_rate );
 	closelog();
 	cerr << my_id << "我已退出:"
-		 << formatNumber( write_rate, 0, 3, 4, ' ', '\'' )
+		 << format( write_rate, 0, 3, 4, ' ', '\'' )
 		 << endl;
 };
 

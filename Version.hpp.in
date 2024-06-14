@@ -1,0 +1,25 @@
+// 项目全局配置，各项值由CMake每次build时自动填入，请勿手动修改本文件！
+
+#pragma once
+
+#define PROJECT_VERSION_MAJOR (@PROJECT_VERSION_MAJOR@)
+#define PROJECT_VERSION_MINOR (@PROJECT_VERSION_MINOR@)
+#define PROJECT_VERSION_PATCH (@PROJECT_VERSION_PATCH@)
+#define PROJECT_RELEASE_NOTES ("@PROJECT_RELEASE_NOTES@")
+#define PROJECT_VERSION       ("@PROJECT_VERSION@")
+#define PROJECT_DESCRIPTION   ("@PROJECT_DESCRIPTION@")
+
+#define APP_NAME ("@APP_NAME@")
+#define APP_FILE ("@APP_FILE@")
+
+#define CMAKE_BUILD_TYPE ( "@CMAKE_BUILD_TYPE@" )
+#define CMAKE_CXX_FLAGS ( "@CMAKE_CXX_FLAGS@" )
+
+#ifdef DEBUG
+#undef NDEBUG
+#else
+#ifdef NDEBUG
+#undef DEBUG
+#endif
+#endif
+// kate: indent-mode cstyle; indent-width 4; replace-tabs off; tab-width 4; 

@@ -6,24 +6,24 @@
 #include <fstream>
 #include <iomanip>
 #include <iostream>
+#include <leonutils/Chrono.hpp>
+#include <leonutils/CraflinRQ.tpp>
+#include <leonutils/Exceptions.hpp>
+#include <leonutils/MemoryOrder.hpp>
 #include <memory>
 #include <mutex>
 #include <semaphore.h>
 #include <shared_mutex>
 #include <sys/syscall.h>   // SYS_gettid
 #include <thread>
-// #include <sys/types.h>  // pid_t
 #include <unistd.h>        // syscall
+// #include <sys/types.h>  // pid_t
 
 #include "LeonLog.hpp"
 #include "ThreadName.hpp"
 #include "Version.hpp"
-#include "buffer/CraflinRQ.tpp"
-#include "chrono/Chrono.hpp"
-#include "event/MemoryOrder.hpp"
-#include "misc/Exceptions.hpp"
 
-using namespace leon_ext;
+using namespace leon_utl;
 using namespace std::chrono;
 using namespace std::chrono_literals;
 using namespace std::filesystem;
@@ -458,7 +458,7 @@ inline void Write1Log( ofstream& p_out, const LogEntry_t& log ) {
 	LogTimestamp_t tpSecPart =
 		time_point_cast<LogTimestamp_t::duration>(
 			std::chrono::floor<seconds>( log.stamp ) );
-	string time_str = formatTime( tpSecPart, LOG_STAMP_FORMAT );
+	string time_str = format_time( tpSecPart, LOG_STAMP_FORMAT );
 
 	// 输出时戳(尽量不拼接字符串,应该快点?)
 	p_out << time_str;
@@ -469,7 +469,7 @@ inline void Write1Log( ofstream& p_out, const LogEntry_t& log ) {
 		uint64_t sub_sec =
 			duration_cast<nanoseconds>( log.stamp - tpSecPart ).count();
 		sub_sec /= s_time_unit;
-		nsec_str = formatNumber( sub_sec, s_stamp_pre, 0, 0, '0' );
+		nsec_str = format( sub_sec, s_stamp_pre, 0, 0, '0' );
 		p_out << '.' << nsec_str;
 	}
 

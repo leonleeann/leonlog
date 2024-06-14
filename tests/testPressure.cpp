@@ -9,7 +9,7 @@
 #include "LeonLog.hpp"
 #include "misc/Converts.hpp"
 
-using namespace leon_ext;
+using namespace leon_utl;
 using namespace leon_log;
 using namespace std::chrono;
 using namespace std;
@@ -55,7 +55,7 @@ int main( int argc, char** argv ) {
 };
 
 void threadBody( int my_id ) {
-	RegistThread( "runner" + formatNumber(my_id, 2, 0, 0, '0' ) );
+	RegistThread( "runner" + format(my_id, 2, 0, 0, '0' ) );
 
 	int count = 0;
 	auto start_time = steady_clock::now();
@@ -71,7 +71,7 @@ void threadBody( int my_id ) {
 	double write_rate = count * 1000000000.0 / lasted.count();
 	this_thread::sleep_for( milliseconds( my_id * 10 ) );
 	cerr << my_id << "我已退出:"
-		 << formatNumber( write_rate, 0, 3, 4, ' ', '\'' )
+		 << format( write_rate, 0, 3, 4, ' ', '\'' )
 		 << endl;
 };
 
