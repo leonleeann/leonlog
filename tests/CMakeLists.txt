@@ -16,7 +16,6 @@ target_link_libraries( s-log
 	objTestLog
 
 	leonlog_static
-	LeonUtils
 	Threads::Threads
 )
 install( TARGETS s-log RUNTIME DESTINATION testing )
@@ -27,7 +26,6 @@ target_link_libraries( d-log
 	objTestLog
 
 	leonlog_dynmic
-	LeonUtils
 	Threads::Threads
 )
 install( TARGETS d-log RUNTIME DESTINATION testing )
