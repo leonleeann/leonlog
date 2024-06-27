@@ -11,6 +11,6 @@ using Names2LinuxTId_t = std::map<std::string, pid_t>;
 // extern "C" pthread_t threadNativeIdOf( const std::string& );
 
 // 获取所有已登记过的映射,注意不能返回引用或指针,必须是对象的副本(多线程环境)!!!
-extern Names2LinuxTId_t getLinuxThreadIds();
+extern Names2LinuxTId_t LinuxThreadIds();
 
 };  // namespace leon_log

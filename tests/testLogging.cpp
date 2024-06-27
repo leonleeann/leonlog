@@ -39,7 +39,7 @@ void threadBody( uint64_t p_uiMyId ) {
 // setTimestampPtr( &tstamp );
 	string myName = string( "线程" ) + to_string( p_uiMyId );
 	RegistThread( myName );
-	auto t_id = leon_log::getLinuxThreadIds()[myName];
+	auto t_id = leon_log::LinuxThreadIds()[myName];
 	lg_debg << "[" << t_id << "]:开始了!";
 	string_view sv { myName.c_str() };
 
@@ -69,14 +69,14 @@ int main( int argc, char** argv ) {
 	parseAppOptions( argc, argv );
 	cout << "pid:" << getpid()
 		 << "\n日志库版本:" << leon_log::Version()
-		 << "\n日志级别:" << leon_log::LevelName( g_log_level )
+		 << "\n日志级别:" << NameOf( g_log_level )
 		 << "\n时戳精度:" << g_stamp_p << "位"
 		 << "\n线程数量:" << g_threads
 		 << "\n生产间隔:" << g_intervl << "ns"
 		 << "\n持续时间:" << g_lasting << "s"
 		 << "\n队列长度:" << g_quesize << endl;
 
-	StartLogging( g_app_name + ".log", LogLevel_e::Debug, g_stamp_p, g_quesize,
+	StartLog( g_app_name + ".log", LogLevel_e::Debug, g_stamp_p, g_quesize,
 				  true, true, true );
 
 	for( uint64_t k = 0; k < g_threads; ++k )
@@ -133,10 +133,10 @@ int main( int argc, char** argv ) {
 //    cerr << "==============准备停止日志系统==============" << endl;
 //    cout << "==============准备停止日志系统==============" << endl;
 //    cerr << "==============准备停止日志系统==============" << endl;
-	for( const auto& [n, i] : leon_log::getLinuxThreadIds() )
+	for( const auto& [n, i] : leon_log::LinuxThreadIds() )
 		lg_erro << n << ":[" << i << "]." << endl;
 
-	StopLogging();
+	StopLog();
 	cout << "系统正常退出." << endl;
 	return EXIT_SUCCESS;
 };

@@ -20,6 +20,7 @@
 // #include <sys/types.h>  // pid_t
 
 #include "LeonLog.hpp"
+#include "StatusFile.hpp"
 #include "ThreadName.hpp"
 #include "Version.hpp"
 
@@ -35,10 +36,8 @@ using std::make_unique;
 using std::max;
 using std::min;
 using std::ofstream;
-using std::ostringstream;
 using std::shared_lock;
 using std::shared_mutex;
-using std::string;
 using std::thread;
 using std::unique_lock;
 using std::unique_ptr;
@@ -49,17 +48,10 @@ namespace leon_log {
 
 // LogEntry: 定义一条日志记录所具有的基本内容
 struct LogEntry_t {
-	// 日志产生时间
-	LogTimestamp_t	stamp;
-
-	// 产生日志的线程
-	string			tname;
-
-	// 日志内容
-	string			body;
-
-	// 日志级别
-	LogLevel_e		level;
+	LogStamp_t	stamp;	// 日志产生时间
+	str_t		tname;	// 产生日志的线程
+	str_t		body;	// 日志内容
+	LogLevel_e	level;	// 日志级别
 };
 
 // LogQue_t: 日志队列(一个队列服务整个APP)
@@ -67,7 +59,7 @@ using LogQue_t = CraflinRQ_t<LogEntry_t>;
 
 //###### 各种常量 ###############################################################
 
-const std::string LOG_LEVEL_NAMES[] = {
+const str_t LOG_LEVEL_NAMES[] = {
 	"DEBUG", // Debug
 	"INFOR", // Infor
 	"NOTIF", // Notif
@@ -76,14 +68,10 @@ const std::string LOG_LEVEL_NAMES[] = {
 	"FATAL"  // Fatal
 };
 
-// 日志入队重试次数
-constexpr unsigned int ENQUE_RETRIES = 10;
-// constexpr unsigned int CHECK_INTERVL = 128;
-
 //###### 各种函数前置申明 #########################################################
 
 // 返回16进制串表达的线程Id
-string ThreadId2Hex( thread::id my_id = std::this_thread::get_id() );
+str_t ThreadId2Hex( thread::id my_id = std::this_thread::get_id() );
 
 // 写日志的线程体
 void WriterThreadBody();
@@ -111,17 +99,23 @@ size_t							s_stamp_pre = 6;
 // 时戳单位(为了截断时戳到指定精度,每次要用的除数)
 uint64_t						s_time_unit = 1;		//多少纳秒
 // 日志文件名, 包含全路径
-string							s_log_file;
+str_t							s_log_file;
 // 日志文件名中缀, 用于日志文件轮转
-string							s_log_infix;
+str_t							s_log_infix;
+// 状态文件名, 包含全路径
+str_t							s_status_file;
+// 状态输出周期
+LogStamp_t::duration			s_status_interval;
+// 下次输出状态的时点
+LogStamp_t						s_next_status;
 
 // 给每个线程起个名字,输出的日志内能够看出每条日志都是由谁产生的
-thread_local string				tl_t_name = ThreadId2Hex();
+thread_local str_t				tl_t_name = ThreadId2Hex();
 Names2LinuxTId_t				s_t_ids;		// 线程名到t_id的映射
 shared_mutex					s_mtx4nids;		// 更新s_t_ids时的同步控制
 
 // 日志时戳,为空就用当前时间
-thread_local const LogTimestamp_t* tl_stamp = nullptr;
+thread_local const LogStamp_t*	tl_stamp = nullptr;
 
 // 缓存日志的队列,整个系统产生的所有日志都存放于此,等待writer线程来消费
 unique_ptr<LogQue_t>			s_log_que = nullptr;
@@ -129,6 +123,9 @@ unique_ptr<ofstream>			s_log_ofs = nullptr;
 
 // 写日志的线程
 thread		s_writer;
+
+// 生成"状态文本"的回调函数
+WriteStatus_f	s_wr_status;
 
 // 用于其它线程通知日志线程"新日志已入队"的信号量
 sem_t		s_new_log;
@@ -147,8 +144,8 @@ bool		s_sto_stamp { false };
 
 //###### 各种函数实现 ############################################################
 
-inline string ThreadId2Hex( thread::id thread_id ) {
-	ostringstream oss;
+inline str_t ThreadId2Hex( thread::id thread_id ) {
+	oss_t oss;
 	oss << std::hex << thread_id;
 	return oss.str();
 };
@@ -159,17 +156,17 @@ extern "C" const char* Version() {
 	return PROJECT_VERSION;
 };
 
-extern "C" const char* LevelName( LogLevel_e ll ) {
+extern "C" const char* NameOf( LogLevel_e ll ) {
 	return LOG_LEVEL_NAMES[ll].c_str();
 };
 
-extern "C" void StartLogging( const string&	file_,
-							  LogLevel_e	levl_,
-							  size_t		prec_,
-							  size_t		capa_,
-							  bool			head_,
-							  bool			stdo_,
-							  bool			stot_ ) {
+extern "C" void StartLog( const str_t&	file_,
+						  LogLevel_e	levl_,
+						  size_t		prec_,
+						  size_t		capa_,
+						  bool			head_,
+						  bool			stdo_,
+						  bool			stot_ ) {
 	if( s_is_running.load( mo_acquire ) )
 		throw bad_usage( "日志系统已启动, 不能重复初始化!" );
 
@@ -199,7 +196,7 @@ extern "C" void StartLogging( const string&	file_,
 	}
 };
 
-extern "C" void StopLogging( bool ft_, bool rn_, const string& infix_ ) {
+extern "C" void StopLog( bool ft_, bool rn_, const str_t& infix_ ) {
 	if( !s_is_running.load( mo_acquire ) )
 // 		throw bad_usage( "日志系统尚未启动, 怎么关闭?" );
 		return;
@@ -240,16 +237,16 @@ extern "C" void StopLogging( bool ft_, bool rn_, const string& infix_ ) {
 		throw std::runtime_error( "信号量销毁失败!" );
 };
 
-extern "C" bool LogIsRunning() {
+extern "C" bool IsLogging() {
 	return s_is_running.load( mo_acquire );
 };
 
-extern "C" void ExitWithLog( const std::string& err ) {
+extern "C" void ExitWithLog( const str_t& err ) {
 	std::cerr << err << std::endl;
 
 	if( s_is_running.load( mo_acquire ) ) {
 		AppendLog( LogLevel_e::Fatal, err );
-		StopLogging();
+		StopLog();
 	}
 	exit( EXIT_FAILURE );
 };
@@ -273,8 +270,21 @@ extern "C" void ExitWithLog( const std::string& err ) {
 	};
 }; */
 
+extern Names2LinuxTId_t LinuxThreadIds() {
+	shared_lock<shared_mutex> sh_lk( s_mtx4nids );
+	Names2LinuxTId_t result { s_t_ids };
+	return result;
+};
+
+// 登记一个线程名, 此后输出该线程的日志时, 会包含此名，而非线程Id
+extern "C" void RegistThread( const str_t& my_name ) {
+	tl_t_name = my_name;
+	unique_lock<shared_mutex> ex_lk( s_mtx4nids );
+	s_t_ids[my_name] = syscall( SYS_gettid );
+};
+
 // 添加日志的主函数, 此处是实现。此函数只是把日志加入队列, 等待日志线程来写入文件
-extern "C" bool AppendLog( LogLevel_e level, const string& body ) {
+extern "C" bool AppendLog( LogLevel_e level, const str_t& body ) {
 	// 只有不低于门限值的日志才能得到输出
 	if( level < g_log_level )
 		return false;
@@ -289,11 +299,14 @@ extern "C" bool AppendLog( LogLevel_e level, const string& body ) {
 	// 日志入队
 	LogEntry_t le { tl_stamp != nullptr ? *tl_stamp : system_clock::now(),
 					tl_t_name, body, level, };
+
+	// 日志入队重试次数
+	constexpr int ENQUE_RETRIES = 10;
 	auto tries = ENQUE_RETRIES;
 	while( ! s_log_que->enque( le ) ) {
 		sem_post( &s_new_log );
 		--tries;
-		if( tries == 0 ) {
+		if( tries <= 0 ) {
 			cerr << LOG_LEVEL_NAMES[LogLevel_e::Error]
 				 << "," << tl_t_name << ",日志入队失败,抛弃日志:"
 				 << body << endl;
@@ -306,18 +319,6 @@ extern "C" bool AppendLog( LogLevel_e level, const string& body ) {
 	return true;
 };
 
-extern "C" void RegistThread( const string& my_name ) {
-// 登记一个线程名, 此后输出该线程的日志时, 会包含此名，而非线程Id
-	tl_t_name = my_name;
-	unique_lock<shared_mutex> ex_lk( s_mtx4nids );
-	s_t_ids[my_name] = syscall( SYS_gettid );
-};
-extern Names2LinuxTId_t getLinuxThreadIds() {
-	shared_lock<shared_mutex> sh_lk( s_mtx4nids );
-	Names2LinuxTId_t result { s_t_ids };
-	return result;
-};
-
 // 设置写盘间隔(每隔多少秒确保保存一次,默认3s)
 extern "C" void SetFlushSeconds( unsigned int secs ) {
 	s_flush_secs = secs;
@@ -328,11 +329,11 @@ extern "C" void SetExitSeconds( unsigned int secs ) {
 	s_exit_secs = secs;
 };
 
-extern "C" void SetLogStampPtr( const LogTimestamp_t* tstamp ) {
+extern "C" void SetLogStampPtr( const LogStamp_t* tstamp ) {
 	tl_stamp = tstamp;
 };
 
-extern "C" void RotateLogFile( const string& infix ) {
+extern "C" void RotateLogFile( const str_t& infix ) {
 // 本函数不会直接改名日志文件,只是置位全局变量,由日志线程完成真正的改名
 // 先确保日志线程真的进入事件循环,否则它首次进入事件循环就会去轮转日志
 	steady_clock::time_point time_out = steady_clock::now() + 100ms;
@@ -352,6 +353,26 @@ extern "C" void RotateLogFile( const string& infix ) {
 		s_writer.detach();
 		throw std::runtime_error( "日志系统轮转超时!" );
 	}
+};
+
+extern "C" void SetStatus( const str_t& file_, WriteStatus_f writer_, int secs_ ) {
+	s_status_file = file_;
+	s_wr_status = writer_;
+	s_status_interval = seconds( secs_ );
+	s_next_status = system_clock::now() + s_status_interval;
+};
+
+// 输出一次状态信息
+void WriteStatus() {
+	if( s_status_file.empty() )
+		return;
+
+	auto now_tp = system_clock::now();
+	if( now_tp < s_next_status )
+		return;
+
+	ofstream f { s_status_file, std::ios_base::out | std::ios_base::trunc };
+	s_wr_status( f );
 };
 
 void WriterThreadBody() {
@@ -399,7 +420,7 @@ void ProcessLogs() {
 		aLog.body = "---------- 日志文件已轮转 ----------";
 		Write1Log( *s_log_ofs, aLog );
 	} else if( s_headr_foot.load( mo_acquire ) ) {
-		aLog.body = "====== leonlog-" + string( PROJECT_VERSION ) + " 日志已启动("
+		aLog.body = "====== leonlog-" + str_t( PROJECT_VERSION ) + " 日志已启动("
 					+ LOG_LEVEL_NAMES[g_log_level] + ") ======";
 		Write1Log( *s_log_ofs, aLog );
 	}
@@ -420,6 +441,7 @@ void ProcessLogs() {
 			s_log_ofs->flush();
 			tsNextFlush = tsNow;
 			tsNextFlush.tv_sec += s_flush_secs;
+			WriteStatus();
 		}
 	}
 
@@ -455,16 +477,16 @@ const char* const LOG_STAMP_FORMAT = "%y/%m/%d %H:%M:%S";
 inline void Write1Log( ofstream& p_out, const LogEntry_t& log ) {
 
 	// 构造时戳
-	LogTimestamp_t tpSecPart =
-		time_point_cast<LogTimestamp_t::duration>(
+	LogStamp_t tpSecPart =
+		time_point_cast<LogStamp_t::duration>(
 			std::chrono::floor<seconds>( log.stamp ) );
-	string time_str = format_time( tpSecPart, LOG_STAMP_FORMAT );
+	str_t time_str = format_time( tpSecPart, LOG_STAMP_FORMAT );
 
 	// 输出时戳(尽量不拼接字符串,应该快点?)
 	p_out << time_str;
 
 	// 是否精确到秒以下
-	string nsec_str;
+	str_t nsec_str;
 	if( s_stamp_pre > 0 ) {
 		uint64_t sub_sec =
 			duration_cast<nanoseconds>( log.stamp - tpSecPart ).count();
@@ -512,4 +534,5 @@ void RenameLogFile() {
 };
 
 }; // namespace leon_log
+
 // kate: indent-mode cstyle; indent-width 4; replace-tabs off; tab-width 4;

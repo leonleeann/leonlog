@@ -1,10 +1,14 @@
 #pragma once
 #include <chrono>
-#include <sstream>		// ostringstream
+#include <functional>
+#include <sstream>
 #include <string>
 #include <type_traits>
 
 namespace leon_log {
+
+using str_t = std::string;
+using oss_t = std::ostringstream;
 
 enum LogLevel_e : int {
 	// 供跟踪、调试时使用的日志, Release编译时不会生成相应代码
@@ -34,7 +38,7 @@ enum LogLevel_e : int {
 	VALUES_COUNT
 };
 
-using LogTimestamp_t = std::chrono::system_clock::time_point;
+using LogStamp_t = std::chrono::system_clock::time_point;
 
 // 全系统日志级别
 extern LogLevel_e g_log_level;
@@ -47,58 +51,59 @@ extern LogLevel_e g_log_level;
 constexpr size_t DEFAULT_LOG_QUE_SIZE = 256;
 
 extern "C" const char* Version();
-extern "C" const char* LevelName( LogLevel_e );
+extern "C" const char* NameOf( LogLevel_e );
 
 // 指定日志文件名, 启动日志系统
-extern "C" void StartLogging(
-	const std::string&	log_file,						// 日志文件路径及名称
-	LogLevel_e			log_levl = LogLevel_e::Debug,	// 日志级别
-	size_t				stamp_precision = 6,			// 时戳精度
-	size_t				que_size = DEFAULT_LOG_QUE_SIZE,// 日志队列容量
-	bool				header = true,					// 启动时输出header
-	bool				stdout = true,					// 同时输出至stdout
-	bool				tstamp = false					// 输出至stdout的带不带时戳
+extern "C" void StartLog(
+	const str_t&	log_file,							// 日志文件路径及名称
+	LogLevel_e		log_levl = LogLevel_e::Debug,		// 日志级别
+	size_t			stamp_precision = 6,				// 时戳精度
+	size_t			que_size = DEFAULT_LOG_QUE_SIZE,	// 日志队列容量
+	bool			header = true,						// 启动时输出header
+	bool			stdout = true,						// 同时输出至stdout
+	bool			tstamp = false						// 输出至stdout的带不带时戳
 );  // 队列容量
 
 // 关闭日志, 并Flush所有日志到磁盘
-extern "C" void StopLogging(
-	bool footer = true,				// 是否在日志尾部输出 footer
-	bool rename = true,				// 关闭日志文件后是否改名
-	const std::string& infix = ""	// 改名的中缀
+extern "C" void StopLog(
+	bool			footer = true,	// 是否在日志尾部输出 footer
+	bool			rename = true,	// 关闭日志文件后是否改名
+	const str_t&	infix = ""		// 改名的中缀
 );
-extern "C" bool LogIsRunning();
+// 日志系统正在运行
+extern "C" bool IsLogging();
 // 显示错误信息,关闭日志并退出
-extern "C" void ExitWithLog( const std::string& );
+extern "C" void ExitWithLog( const str_t& );
 
 // 在fork后的子进程内关闭日志,因为此时没有writer线程,只能静默释放资源
 // extern "C" void _stopLogging();
 
 // 为当前线程登记一个名字,此后输出该线程的日志会包含此名，而非线程Id
-extern "C" void RegistThread( const std::string& );
+extern "C" void RegistThread( const str_t& );
 
 // 添加日志的主函数
-extern "C" bool AppendLog( LogLevel_e level, const std::string& body );
+extern "C" bool AppendLog( LogLevel_e, const str_t& body );
 
 // 设置写盘间隔(每隔多少秒确保保存一次,默认1s)
-extern "C" void SetFlushSeconds( unsigned int secs );  // 单位:秒
+extern "C" void SetFlushSeconds( unsigned int secs );
 
 // 设置退出等待时长(给日志线程多少时间清盘,默认3s)
-extern "C" void SetExitSeconds( unsigned int secs );  // 单位:秒
+extern "C" void SetExitSeconds( unsigned int secs );
 
 // 设置一个存放时间戳的指针,之后输出日志时都会去那个地址找时戳
-extern "C" void SetLogStampPtr( const LogTimestamp_t* );
+extern "C" void SetLogStampPtr( const LogStamp_t* );
 
 // 轮转日志文件
-extern "C" void RotateLogFile( const std::string& infix /*中缀*/ );
+extern "C" void RotateLogFile( const str_t& infix /*中缀*/ );
 
 #ifdef DEBUG
 
-#define LOG_DEBUG( log_body ) ( g_log_level <= LogLevel_e::Debug && AppendLog( LogLevel_e::Debug, std::string( __func__ ) + "()," + ( log_body ) ) )
-#define LOG_INFOR( log_body ) ( g_log_level <= LogLevel_e::Infor && AppendLog( LogLevel_e::Infor, std::string( __func__ ) + "()," + ( log_body ) ) )
-#define LOG_NOTIF( log_body ) ( g_log_level <= LogLevel_e::Notif && AppendLog( LogLevel_e::Notif, std::string( __func__ ) + "()," + ( log_body ) ) )
-#define LOG_WARNN( log_body ) ( g_log_level <= LogLevel_e::Warnn && AppendLog( LogLevel_e::Warnn, std::string( __func__ ) + "()," + ( log_body ) ) )
-#define LOG_ERROR( log_body ) ( g_log_level <= LogLevel_e::Error && AppendLog( LogLevel_e::Error, std::string( __func__ ) + "()," + ( log_body ) ) )
-#define LOG_FATAL( log_body ) ( g_log_level <= LogLevel_e::Fatal && AppendLog( LogLevel_e::Fatal, std::string( __func__ ) + "()," + ( log_body ) ) )
+#define LOG_DEBUG( log_body ) ( g_log_level <= LogLevel_e::Debug && AppendLog( LogLevel_e::Debug, str_t( __func__ ) + "()," + ( log_body ) ) )
+#define LOG_INFOR( log_body ) ( g_log_level <= LogLevel_e::Infor && AppendLog( LogLevel_e::Infor, str_t( __func__ ) + "()," + ( log_body ) ) )
+#define LOG_NOTIF( log_body ) ( g_log_level <= LogLevel_e::Notif && AppendLog( LogLevel_e::Notif, str_t( __func__ ) + "()," + ( log_body ) ) )
+#define LOG_WARNN( log_body ) ( g_log_level <= LogLevel_e::Warnn && AppendLog( LogLevel_e::Warnn, str_t( __func__ ) + "()," + ( log_body ) ) )
+#define LOG_ERROR( log_body ) ( g_log_level <= LogLevel_e::Error && AppendLog( LogLevel_e::Error, str_t( __func__ ) + "()," + ( log_body ) ) )
+#define LOG_FATAL( log_body ) ( g_log_level <= LogLevel_e::Fatal && AppendLog( LogLevel_e::Fatal, str_t( __func__ ) + "()," + ( log_body ) ) )
 
 #else
 
@@ -111,7 +116,7 @@ extern "C" void RotateLogFile( const std::string& infix /*中缀*/ );
 
 #endif
 
-class Log_t: public std::ostringstream {
+class Log_t: public oss_t {
 public:
 	explicit Log_t( LogLevel_e l ) : _level( l ) {};
 
@@ -149,9 +154,9 @@ inline Log_t& operator<<( Log_t& log_, const char* str_ ) {
 		return log_;
 
 	if( str_ == nullptr )
-		static_cast<std::ostringstream&>( log_ ) << "{null-char*}";
+		static_cast<oss_t&>( log_ ) << "{null-char*}";
 	else
-		static_cast<std::ostringstream&>( log_ ) << str_;
+		static_cast<oss_t&>( log_ ) << str_;
 	return log_;
 };
 
@@ -161,9 +166,9 @@ inline Log_t& operator<<( Log_t& log_, const void* ptr_ ) {
 		return log_;
 
 	if( ptr_ == nullptr )
-		static_cast<std::ostringstream&>( log_ ) << "{null-void*}";
+		static_cast<oss_t&>( log_ ) << "{null-void*}";
 	else
-		static_cast<std::ostringstream&>( log_ ) << std::hex << ptr_;
+		static_cast<oss_t&>( log_ ) << std::hex << ptr_;
 	return log_;
 };
 
@@ -171,7 +176,7 @@ template <NonPtr T>
 inline Log_t& operator<<( Log_t& log_, const T& body_ ) {
 
 	if( log_._level >= g_log_level )
-		static_cast<std::ostringstream&>( log_ ) << body_;
+		static_cast<oss_t&>( log_ ) << body_;
 
 	return log_;
 };
@@ -183,9 +188,9 @@ inline Log_t& operator<<( Log_t& log_, T body_ ) {
 		return log_;
 
 	if( body_ == nullptr )
-		static_cast<std::ostringstream&>( log_ ) << "{nullptr}";
+		static_cast<oss_t&>( log_ ) << "{nullptr}";
 	else
-		static_cast<std::ostringstream&>( log_ ) << *body_;
+		static_cast<oss_t&>( log_ ) << *body_;
 
 	return log_;
 };

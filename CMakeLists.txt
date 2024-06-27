@@ -2,14 +2,14 @@ cmake_minimum_required( VERSION 3.16.0 )
 
 set( PROJECT_VERSION_MAJOR 1 )   # 主版本
 set( PROJECT_VERSION_MINOR 8 )   # 次版本
-set( PROJECT_VERSION_PATCH 4 )   # 修订号(Bug fix)
+set( PROJECT_VERSION_PATCH 5 )   # 修订号(Bug fix)
 
 # 版本全串
 set( PROJECT_VERSION
 	${PROJECT_VERSION_MAJOR}.${PROJECT_VERSION_MINOR}.${PROJECT_VERSION_PATCH})
 
 # 版本说明
-set( PROJECT_VERSION_NOTES "适配leonutils_0_0_9" )
+set( PROJECT_VERSION_NOTES "可以在日志线程内输出状态，适配leonutils_0_1_0" )
 
 # 项目描述
 set( PROJECT_DESCRIPTION   "线程安全的异步文件日志库" )
@@ -46,7 +46,7 @@ include_directories( "." )
 #======== obj libs =====================
 add_library( leonutl_static STATIC IMPORTED )
 set_property( TARGET leonutl_static PROPERTY
-	IMPORTED_LOCATION "/usr/local/lib/libLeonUtils.a.0.0.6" )
+	IMPORTED_LOCATION "/usr/local/lib/libLeonUtils.a.0.1.0" )
 add_library( objCommon OBJECT LogToFile.cpp )
 
 #======== 静态版 =====================
