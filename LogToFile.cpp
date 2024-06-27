@@ -205,7 +205,7 @@ extern "C" void StopLogging( bool ft_, bool rn_, const string& infix_ ) {
 		return;
 
 	if( ft_ )
-		LOG_NOTIF( "将要停止日志系统......" );
+		LOG_DEBUG( "将要停止日志系统......" );
 
 // 本函数不会直接改名日志文件,只是置位全局变量,由日志线程完成真正的改名
 	s_headr_foot.store( ft_, mo_release );
@@ -394,7 +394,7 @@ void ProcessLogs() {
 	timespec_get( &tsNextFlush, TIME_UTC );
 	tsNextFlush.tv_sec += s_flush_secs;
 
-	LogEntry_t aLog { system_clock::now(), "Logger", {}, LogLevel_e::Notif, };
+	LogEntry_t aLog { system_clock::now(), "Logger", {}, LogLevel_e::Infor, };
 	if( s_is_rolling.load( mo_acquire ) ) {
 		aLog.body = "---------- 日志文件已轮转 ----------";
 		Write1Log( *s_log_ofs, aLog );
@@ -438,7 +438,7 @@ void ProcessLogs() {
 				Write1Log( *s_log_ofs, aLog );
 
 		if( s_headr_foot.load( mo_acquire ) ) {
-			aLog.level = LogLevel_e::Notif;
+			aLog.level = LogLevel_e::Infor;
 			aLog.tname = "Logger";
 			aLog.stamp = system_clock::now();
 			aLog.body = "================ 日志已停止 =================";
