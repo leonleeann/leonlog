@@ -19,10 +19,10 @@
 #include <unistd.h>        // syscall
 // #include <sys/types.h>  // pid_t
 
-#include "LeonLog.hpp"
-#include "StatusFile.hpp"
-#include "ThreadName.hpp"
 #include "Version.hpp"
+#include "leonlog/LeonLog.hpp"
+#include "leonlog/StatusFile.hpp"
+#include "leonlog/ThreadName.hpp"
 
 using namespace leon_utl;
 using namespace std::chrono;

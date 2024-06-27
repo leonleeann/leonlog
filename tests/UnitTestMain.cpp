@@ -1,7 +1,7 @@
-#include <LeonLog>
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 #include <iostream>
+#include <leonlog/LeonLog.hpp>
 
 using namespace leon_log;
 using namespace std;
