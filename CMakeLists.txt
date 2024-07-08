@@ -9,7 +9,7 @@ set( PROJECT_VERSION
 	${PROJECT_VERSION_MAJOR}.${PROJECT_VERSION_MINOR}.${PROJECT_VERSION_PATCH})
 
 # 版本说明
-set( PROJECT_VERSION_NOTES "调整源码树结构，类似leonutils_0_1_0" )
+set( PROJECT_VERSION_NOTES "适配leonutils_0_1_1" )
 
 # 项目描述
 set( PROJECT_DESCRIPTION   "线程安全的异步文件日志库" )
@@ -48,7 +48,7 @@ include_directories( "include" )
 ######## 主要模块 ###############################################################
 add_library( leonutl_static STATIC IMPORTED )
 set_property( TARGET leonutl_static PROPERTY
-	IMPORTED_LOCATION "/usr/local/lib/libLeonUtils.a.0.1.0" )
+	IMPORTED_LOCATION "/usr/local/lib/libLeonUtils.a.0.1.1" )
 add_library( objCommon OBJECT src/LogToFile.cpp )
 
 ######## 主要产出 ###############################################################

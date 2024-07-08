@@ -14,7 +14,6 @@ add_library( objTestLog OBJECT testLogging.cpp )
 add_executable( s-log )
 target_link_libraries( s-log
 	objTestLog
-
 	leonlog_static
 	Threads::Threads
 )
@@ -24,7 +23,6 @@ install( TARGETS s-log RUNTIME DESTINATION testing )
 add_executable( d-log )
 target_link_libraries( d-log
 	objTestLog
-
 	leonlog_dynmic
 	Threads::Threads
 )
@@ -50,7 +48,7 @@ install( TARGETS testPressure RUNTIME DESTINATION testing )
 #======== test syslog =====================
 add_executable( testSyslog testSyslog.cpp )
 target_link_libraries( testSyslog
-	LeonUtils
+	leonutl_static
 	Threads::Threads
 )
 install( TARGETS testSyslog RUNTIME DESTINATION testing )
