@@ -2,14 +2,14 @@ cmake_minimum_required( VERSION 3.16.0 )
 
 set( PROJECT_VERSION_MAJOR 1 )   # 主版本
 set( PROJECT_VERSION_MINOR 8 )   # 次版本
-set( PROJECT_VERSION_PATCH 6 )   # 修订号(Bug fix)
+set( PROJECT_VERSION_PATCH 7 )   # 修订号(Bug fix)
 
 # 版本全串
 set( PROJECT_VERSION
 	${PROJECT_VERSION_MAJOR}.${PROJECT_VERSION_MINOR}.${PROJECT_VERSION_PATCH})
 
 # 版本说明
-set( PROJECT_VERSION_NOTES "适配leonutils_0_1_1" )
+set( PROJECT_VERSION_NOTES "流式输出接口搬到命名空间之外" )
 
 # 项目描述
 set( PROJECT_DESCRIPTION   "线程安全的异步文件日志库" )
