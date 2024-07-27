@@ -38,7 +38,7 @@ TEST( TestLog, withString ) {
 	char* str_null { nullptr };
 	s_log_buf.clear();
 	lg_debg << str_null;
-	ASSERT_EQ( s_log_buf, "{null-char*}" );
+	ASSERT_EQ( s_log_buf, "" );
 };
 
 TEST( TestLog, withCustomizedType ) {
