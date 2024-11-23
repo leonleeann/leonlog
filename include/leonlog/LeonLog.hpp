@@ -115,6 +115,9 @@ extern "C" void SetLogStampPtr( const LogStamp_t* );
 // 轮转日志文件
 extern "C" void RotateLogFile( const str_t& infix /*中缀*/ );
 
+// 绑核到哪个 CPU, 变更 nice 值
+extern "C" bool AffineCpu( int cpu );
+
 #ifdef DEBUG
 
 #define LOG_DEBUG( log_body ) ( g_log_level <= LogLevel_e::Debug && AppendLog( LogLevel_e::Debug, str_t( __func__ ) + "()," + ( log_body ) ) )
@@ -162,7 +165,11 @@ inline leon_log::Log_t& operator<<( leon_log::Log_t& log_, const char* str_ ) {
 	return log_;
 };
 
-// void* 同理
+/* void* 同理
+template<typename T> T& unmove( T&& r_ ) {
+	return static_cast<T&>( r_ );
+}*/
+
 inline leon_log::Log_t& operator<<( leon_log::Log_t& log_, const void* ptr_ ) {
 	if( log_._level < leon_log::g_log_level )
 		return log_;

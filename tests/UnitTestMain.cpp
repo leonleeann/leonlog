@@ -6,23 +6,23 @@
 using namespace leon_log;
 using namespace std;
 
-namespace leon_log {
-
-LogLevel_e	g_log_level = LogLevel_e::Debug;
-string		s_log_buf;
-
-// 这是 AppendLog 的 fake
-extern "C" bool AppendLog( LogLevel_e, const string& body_ ) {
-
-	s_log_buf = body_;
-	return true;
-};
-
 struct Custom_t {
-	string _data;
+	str_t _data;
 };
 ostream& operator<<( ostream& os_, const Custom_t& cd_ ) {
 	return os_ << cd_._data;
+};
+
+namespace leon_log {
+
+LogLevel_e	g_log_level = LogLevel_e::Debug;
+str_t		s_log_buf;
+
+// 这是 AppendLog 的 fake
+extern "C" bool AppendLog( LogLevel_e, const str_t& body_ ) {
+
+	s_log_buf = body_;
+	return true;
 };
 
 TEST( TestLog, withString ) {
@@ -30,7 +30,7 @@ TEST( TestLog, withString ) {
 	lg_debg << "str123";
 	ASSERT_EQ( s_log_buf, "str123" );
 
-	string str456 { "str456" };
+	str_t str456 { "str456" };
 	s_log_buf.clear();
 	lg_debg << str456;
 	ASSERT_EQ( s_log_buf, str456 );
@@ -38,7 +38,13 @@ TEST( TestLog, withString ) {
 	char* str_null { nullptr };
 	s_log_buf.clear();
 	lg_debg << str_null;
+	// 搞不定
 	ASSERT_EQ( s_log_buf, "" );
+
+	s_log_buf.clear();
+	// 还是只能这样
+	{ Log_t lg{Debug}; lg << str_null; }
+	ASSERT_EQ( s_log_buf, "{null-char*}" );
 };
 
 TEST( TestLog, withCustomizedType ) {
@@ -74,6 +80,12 @@ TEST( TestLog, withPointers ) {
 	s_log_buf.clear();
 	void* vptr = nullptr;
 	lg_debg << vptr;
+//搞不定	ASSERT_EQ( s_log_buf, "{null-char*}" );
+	ASSERT_EQ( s_log_buf, "0" );
+
+	s_log_buf.clear();
+	// 还是只能这样
+	{ Log_t lg{Debug}; lg << vptr; }
 	ASSERT_EQ( s_log_buf, "{null-void*}" );
 };
 

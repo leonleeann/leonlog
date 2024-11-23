@@ -29,7 +29,8 @@ using namespace std::chrono;
 using namespace std::chrono_literals;
 using namespace std::filesystem;
 
-using std::atomic_bool;
+using abool_t = std::atomic_bool;
+using apid_t = std::atomic<pid_t>;
 using std::cerr;
 using std::endl;
 using std::make_unique;
@@ -122,25 +123,27 @@ unique_ptr<LogQue_t>			s_log_que = nullptr;
 unique_ptr<ofstream>			s_log_ofs = nullptr;
 
 // 写日志的线程
-thread		s_writer;
+thread	s_writer;
 
 // 生成"状态文本"的回调函数
 WriteStatus_f	s_wr_status;
 
 // 用于其它线程通知日志线程"新日志已入队"的信号量
-sem_t		s_new_log;
+sem_t	s_new_log;
 // 是否正在进行日志文件轮转
-atomic_bool	s_is_rolling { false };
+abool_t	s_is_rolling { false };
 // 指示writer线程是否还应继续运行的标志. 若将其置false, 日志线程将清空日志队列后退出
-atomic_bool	s_should_run { false };
+abool_t	s_should_run { false };
 // 日志系统正在运行标志, 避免重复启动
-atomic_bool	s_is_running { false };
+abool_t	s_is_running { false };
 // 要不要在启停时输出header/footer
-atomic_bool	s_headr_foot { true };
+abool_t	s_headr_foot { true };
 // 是否同时输出至stdout
-bool		s_to_stdout { false };
+bool	s_to_stdout { false };
 // 输出至stdout的内容是否也带时戳
-bool		s_sto_stamp { false };
+bool	s_sto_stamp { false };
+// logger 线程的 pthread_id
+apid_t	s_log_tid {};
 
 //###### 各种函数实现 ############################################################
 
@@ -383,6 +386,7 @@ void WriterThreadBody() {
 	pthread_setcancelstate( PTHREAD_CANCEL_ENABLE, &old_state );
 	 */
 
+	s_log_tid = gettid();
 	// 日志线程自己也可以添加日志,当然就也可以注册有意义的线程名称
 	RegistThread( "Logger" );
 
@@ -531,6 +535,14 @@ void RenameLogFile() {
 		new_path += old_path.extension();
 	}
 	rename( old_path, new_path );
+};
+
+extern "C" bool AffineCpu( int cpu_ ) {
+	cpu_set_t mask;
+	CPU_ZERO( &mask );
+	CPU_SET( cpu_, &mask );
+
+	return sched_setaffinity( s_log_tid.load(), sizeof( mask ), &mask ) == 0;
 };
 
 }; // namespace leon_log
