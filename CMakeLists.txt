@@ -1,15 +1,15 @@
 cmake_minimum_required( VERSION 3.16.0 )
 
 set( PROJECT_VERSION_MAJOR 1 )   # 主版本
-set( PROJECT_VERSION_MINOR 8 )   # 次版本
-set( PROJECT_VERSION_PATCH 9 )   # 修订号(Bug fix)
+set( PROJECT_VERSION_MINOR 9 )   # 次版本
+set( PROJECT_VERSION_PATCH 0 )   # 修订号(Bug fix)
 
 # 版本全串
 set( PROJECT_VERSION
 	${PROJECT_VERSION_MAJOR}.${PROJECT_VERSION_MINOR}.${PROJECT_VERSION_PATCH})
 
 # 版本说明
-set( PROJECT_VERSION_NOTES "日志线程绑核到指定CPU" )
+set( PROJECT_VERSION_NOTES "降低日志线程的nice值" )
 
 # 项目描述
 set( PROJECT_DESCRIPTION   "线程安全的异步文件日志库" )

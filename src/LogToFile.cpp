@@ -1,7 +1,9 @@
 #include <algorithm>    // for_each, max, min, sort, swap
 #include <atomic>
+#include <cerrno>		// errno
 #include <chrono>
-#include <cmath>        // abs, ceil, floor, isnan, log, log10, pow, round, sqrt
+#include <cmath>		// abs, ceil, floor, isnan, log, log10, pow, round, sqrt
+#include <cstring>		// strlen, strncmp, strncpy, memset, memcpy, memmove, strerror
 #include <filesystem>
 #include <fstream>
 #include <iomanip>
@@ -12,12 +14,13 @@
 #include <leonutils/MemoryOrder.hpp>
 #include <memory>
 #include <mutex>
+#include <sched.h>		// sched_setaffinity
 #include <semaphore.h>
 #include <shared_mutex>
-#include <sys/syscall.h>   // SYS_gettid
+#include <sys/syscall.h>	// SYS_gettid
+#include <sys/sysinfo.h>	// get_nprocs
 #include <thread>
-#include <unistd.h>        // syscall
-// #include <sys/types.h>  // pid_t
+#include <unistd.h>		// syscall
 
 #include "Version.hpp"
 #include "leonlog/LeonLog.hpp"
@@ -30,7 +33,7 @@ using namespace std::chrono_literals;
 using namespace std::filesystem;
 
 using abool_t = std::atomic_bool;
-using apid_t = std::atomic<pid_t>;
+using aptid_t = std::atomic<pthread_t>;
 using std::cerr;
 using std::endl;
 using std::make_unique;
@@ -143,7 +146,7 @@ bool	s_to_stdout { false };
 // 输出至stdout的内容是否也带时戳
 bool	s_sto_stamp { false };
 // logger 线程的 pthread_id
-apid_t	s_log_tid {};
+aptid_t	s_log_tid {};
 
 //###### 各种函数实现 ############################################################
 
@@ -386,7 +389,9 @@ void WriterThreadBody() {
 	pthread_setcancelstate( PTHREAD_CANCEL_ENABLE, &old_state );
 	 */
 
-	s_log_tid = gettid();
+	s_log_tid = pthread_self();
+	nice( 19 );	// 注意nice接受的参数是增量,有积累效应, 但最大也就 19
+
 	// 日志线程自己也可以添加日志,当然就也可以注册有意义的线程名称
 	RegistThread( "Logger" );
 
@@ -541,8 +546,7 @@ extern "C" bool AffineCpu( int cpu_ ) {
 	cpu_set_t mask;
 	CPU_ZERO( &mask );
 	CPU_SET( cpu_, &mask );
-
-	return sched_setaffinity( s_log_tid.load(), sizeof( mask ), &mask ) == 0;
+	return ( pthread_setaffinity_np( s_log_tid, sizeof( mask ), &mask ) == 0 );
 };
 
 }; // namespace leon_log

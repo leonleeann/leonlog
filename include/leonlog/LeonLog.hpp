@@ -115,7 +115,7 @@ extern "C" void SetLogStampPtr( const LogStamp_t* );
 // 轮转日志文件
 extern "C" void RotateLogFile( const str_t& infix /*中缀*/ );
 
-// 绑核到哪个 CPU, 变更 nice 值
+// 绑核到哪个 CPU. 其实绑核不如"nice值"和"调度优先级"更节约cpu
 extern "C" bool AffineCpu( int cpu );
 
 #ifdef DEBUG
