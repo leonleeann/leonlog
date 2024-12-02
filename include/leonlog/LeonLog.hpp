@@ -5,6 +5,9 @@
 #include <string>
 #include <type_traits>
 
+using str_t = std::string;
+using oss_t = std::ostringstream;
+
 // 指针概念
 template<typename T>
 concept AnyPtr =
@@ -23,9 +26,6 @@ concept NonPtr =
 	!std::is_same_v<std::remove_cvref_t<std::remove_pointer_t<T>>, char>&&
 	!std::is_same_v<std::remove_pointer_t<std::remove_cvref_t<T>>, void>&&
 	!std::is_same_v<std::remove_cvref_t<std::remove_pointer_t<T>>, void>;
-
-using str_t = std::string;
-using oss_t = std::ostringstream;
 
 namespace leon_log {
 

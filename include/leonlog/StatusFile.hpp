@@ -2,9 +2,9 @@
 #include <functional>
 #include <iosfwd>
 
-namespace leon_log {
-
 using str_t = std::string;
+
+namespace leon_log {
 
 using WriteStatus_f = std::function<void( std::ostream& )>;
 

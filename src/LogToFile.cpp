@@ -34,12 +34,12 @@ using namespace std::filesystem;
 
 using abool_t = std::atomic_bool;
 using aptid_t = std::atomic<pthread_t>;
+using ofs_t = std::ofstream;
 using std::cerr;
 using std::endl;
 using std::make_unique;
 using std::max;
 using std::min;
-using std::ofstream;
 using std::shared_lock;
 using std::shared_mutex;
 using std::thread;
@@ -84,7 +84,7 @@ void WriterThreadBody();
 void ProcessLogs();
 
 // 写一条日志
-void Write1Log( ofstream&, const LogEntry_t& );
+void Write1Log( ofs_t&, const LogEntry_t& );
 
 // 完成一次日志轮转(将当前日志文件保存、关闭、改名)
 void RenameLogFile();
@@ -123,7 +123,7 @@ thread_local const LogStamp_t*	tl_stamp = nullptr;
 
 // 缓存日志的队列,整个系统产生的所有日志都存放于此,等待writer线程来消费
 unique_ptr<LogQue_t>			s_log_que = nullptr;
-unique_ptr<ofstream>			s_log_ofs = nullptr;
+unique_ptr<ofs_t>				s_log_ofs = nullptr;
 
 // 写日志的线程
 thread	s_writer;
@@ -377,7 +377,7 @@ void WriteStatus() {
 	if( now_tp < s_next_status )
 		return;
 
-	ofstream f { s_status_file, std::ios_base::out | std::ios_base::trunc };
+	ofs_t f { s_status_file, std::ios_base::out | std::ios_base::trunc };
 	s_wr_status( f );
 };
 
@@ -414,7 +414,7 @@ void WriterThreadBody() {
 };
 
 void ProcessLogs() {
-	s_log_ofs = make_unique<ofstream>( s_log_file,
+	s_log_ofs = make_unique<ofs_t>( s_log_file,
 									   std::ios_base::out | std::ios_base::app );
 	s_log_ofs->imbue( std::locale( "C" ) );
 	s_log_ofs->clear();
@@ -483,7 +483,7 @@ void ProcessLogs() {
 
 const char* const LOG_STAMP_FORMAT = "%y/%m/%d %H:%M:%S";
 
-inline void Write1Log( ofstream& p_out, const LogEntry_t& log ) {
+inline void Write1Log( ofs_t& p_out, const LogEntry_t& log ) {
 
 	// 构造时戳
 	LogStamp_t tpSecPart =
