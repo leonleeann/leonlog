@@ -500,7 +500,7 @@ inline void Write1Log( ofs_t& p_out, const LogEntry_t& log ) {
 		uint64_t sub_sec =
 			duration_cast<nanoseconds>( log.stamp - tpSecPart ).count();
 		sub_sec /= s_time_unit;
-		nsec_str = format( sub_sec, s_stamp_pre, 0, 0, '0' );
+		nsec_str = fmt( sub_sec, s_stamp_pre, 0, 0, '0' );
 		p_out << '.' << nsec_str;
 	}
 
