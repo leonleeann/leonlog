@@ -95,7 +95,7 @@ void RenameLogFile();
 LogLevel_e	g_log_level = LogLevel_e::Debug;
 
 // 写盘间隔(每隔多少秒确保保存一次)
-decltype( timespec::tv_sec )	s_flush_secs = 1;	// 单位:秒
+decltype( timespec::tv_nsec )	s_flush_ns = 1000000000;	// 单位:纳秒
 // 干掉日志线程之前等待多少秒
 unsigned int					s_exit_secs = 3;	// 单位:秒
 // 时戳精度(0~9代表精确到秒的几位小数)
@@ -326,8 +326,8 @@ extern "C" bool AppendLog( LogLevel_e level, const str_t& body ) {
 };
 
 // 设置写盘间隔(每隔多少秒确保保存一次,默认3s)
-extern "C" void SetFlushSeconds( unsigned int secs ) {
-	s_flush_secs = secs;
+extern "C" void SetFlushSeconds( SysDura_t int_ ) {
+	s_flush_ns = int_.count();
 };
 
 // 设置退出等待时长(给日志线程多少时间清盘,默认1s)
@@ -422,7 +422,7 @@ void ProcessLogs() {
 	// 每过1秒Flush一下, 所以需要记录时间
 	timespec tsNextFlush, tsNow;
 	timespec_get( &tsNextFlush, TIME_UTC );
-	tsNextFlush.tv_sec += s_flush_secs;
+	tsNextFlush += s_flush_ns;
 
 	LogEntry_t aLog { system_clock::now(), "Logger", {}, LogLevel_e::Infor, };
 	if( s_is_rolling.load( mo_acquire ) ) {
@@ -449,7 +449,7 @@ void ProcessLogs() {
 		if( tsNow > tsNextFlush ) {
 			s_log_ofs->flush();
 			tsNextFlush = tsNow;
-			tsNextFlush.tv_sec += s_flush_secs;
+			tsNextFlush += s_flush_ns;
 			WriteStatus();
 		}
 	}

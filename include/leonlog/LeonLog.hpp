@@ -1,6 +1,7 @@
 #pragma once
 #include <chrono>
 #include <functional>
+#include <leonutils/ChronoTypes.hpp>
 #include <sstream>
 #include <string>
 #include <type_traits>
@@ -104,7 +105,7 @@ extern "C" void RegistThread( const str_t& );
 extern "C" bool AppendLog( LogLevel_e, const str_t& body );
 
 // 设置写盘间隔(每隔多少秒确保保存一次,默认1s)
-extern "C" void SetFlushSeconds( unsigned int secs );
+extern "C" void SetFlushIntrvl( leon_utl::SysDura_t interval );
 
 // 设置退出等待时长(给日志线程多少时间清盘,默认3s)
 extern "C" void SetExitSeconds( unsigned int secs );
