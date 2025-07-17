@@ -2,6 +2,7 @@
 #include <chrono>
 #include <functional>
 #include <leonutils/ChronoTypes.hpp>
+#include <leonutils/UnionTypes.hpp>
 #include <sstream>
 #include <string>
 #include <type_traits>
@@ -28,6 +29,7 @@ concept NonPtr =
 	!std::is_same_v<std::remove_pointer_t<std::remove_cvref_t<T>>, void>&&
 	!std::is_same_v<std::remove_cvref_t<std::remove_pointer_t<T>>, void>;
 
+//==============================================================================
 namespace leon_log {
 
 enum LogLevel_e : int {
@@ -152,27 +154,22 @@ public:
 	LogLevel_e _level;
 };
 
-};  // namespace leon_log
-
-// char* 是指针, 但不应该解引输出, 只好单做一个非模板的函数
-inline leon_log::Log_t& operator<<( leon_log::Log_t& log_, const char* str_ ) {
+/*-------------------------------------
+	为了特殊处理指针, 当遭遇空指针时, 能够输出诸如 "{null-char*}", "{null-void*}"...
+	这样的玩意, 而非直接崩溃, 所以试试针对特定类型做 overload. */
+inline Log_t& operator<<( Log_t& log_, const char* ptr_ ) {
 	if( log_._level < leon_log::g_log_level )
 		return log_;
 
-	if( str_ == nullptr )
+	if( ptr_ == nullptr )
 		static_cast<oss_t&>( log_ ) << "{null-char*}";
 	else
-		static_cast<oss_t&>( log_ ) << str_;
+		static_cast<oss_t&>( log_ ) << ptr_;
 	return log_;
 };
 
-/* void* 同理
-template<typename T> T& unmove( T&& r_ ) {
-	return static_cast<T&>( r_ );
-}*/
-
-inline leon_log::Log_t& operator<<( leon_log::Log_t& log_, const void* ptr_ ) {
-	if( log_._level < leon_log::g_log_level )
+inline Log_t& operator<<( Log_t& log_, const void* ptr_ ) {
+	if( log_._level < g_log_level )
 		return log_;
 
 	if( ptr_ == nullptr )
@@ -181,6 +178,25 @@ inline leon_log::Log_t& operator<<( leon_log::Log_t& log_, const void* ptr_ ) {
 		static_cast<oss_t&>( log_ ) << std::hex << ptr_;
 	return log_;
 };
+
+inline std::ostream& operator<<( std::ostream& os_, leon_utl::U64_u u_ ) {
+	return os_ << u_.view();
+};
+
+//-------------------------------------
+
+};	// namespace leon_log ======================================================
+
+/* operator<<函数的overload, 在不同的命名空间内似乎不一定能被用上, 试试在地板上也放一个
+inline leon_log::Log_t& operator<<( leon_log::Log_t& log_, const char* ptr_ ) {
+	return leon_log::operator<<( log_, ptr_ );
+};
+inline leon_log::Log_t& operator<<( leon_log::Log_t& log_, const void* ptr_ ) {
+	return leon_log::operator<<( log_, ptr_ );
+};
+*/
+
+// template<typename T> T& unmove( T&& r_ ) { return static_cast<T&>( r_ ); }
 
 template <NonPtr T>
 inline leon_log::Log_t& operator<<( leon_log::Log_t& log_, const T& body_ ) {

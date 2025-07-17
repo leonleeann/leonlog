@@ -2,14 +2,18 @@
 #include <gtest/gtest.h>
 #include <iostream>
 #include <leonlog/LeonLog.hpp>
+#include <sstream>
 
 using namespace leon_log;
 using namespace std;
+using oss_t = std::ostringstream;
+using ost_t = std::ostream;
+using stv_t = std::string_view;
 
 struct Custom_t {
 	str_t _data;
 };
-ostream& operator<<( ostream& os_, const Custom_t& cd_ ) {
+ost_t& operator<<( ost_t& os_, const Custom_t& cd_ ) {
 	return os_ << cd_._data;
 };
 
@@ -25,6 +29,28 @@ extern "C" bool AppendLog( LogLevel_e, const str_t& body_ ) {
 	return true;
 };
 
+/*
+// 试试 U64_u 能不能输出
+ost_t& operator<<( ost_t& os_, leon_utl::U64_u u_ ) {
+	return os_ << u_.view();
+};
+
+Log_t& operator<<( Log_t& log_, leon_utl::U64_u u_ ) {
+	if( log_._level < leon_log::g_log_level )
+		return log_;
+
+	stv_t svw = u_.view();
+	log_ << svw;
+	return log_;
+}; */
+
+TEST( TestLog, withU64View ) {
+	s_log_buf.clear();
+	leon_utl::U64_u u64 { "UStrView" };
+	lg_debg << u64;
+	ASSERT_EQ( s_log_buf, u64.str() );
+};
+
 TEST( TestLog, withString ) {
 	s_log_buf.clear();
 	lg_debg << "str123";
@@ -38,11 +64,10 @@ TEST( TestLog, withString ) {
 	char* str_null { nullptr };
 	s_log_buf.clear();
 	lg_debg << str_null;
-	// 搞不定
-	ASSERT_EQ( s_log_buf, "" );
+	// 如果把 operator<<函数 放到 leon_log 空间内, 这里就能得到期望输出 "{null-char*}"
+	ASSERT_EQ( s_log_buf, "{null-char*}" );
 
 	s_log_buf.clear();
-	// 还是只能这样
 	{ Log_t lg{Debug}; lg << str_null; }
 	ASSERT_EQ( s_log_buf, "{null-char*}" );
 };
@@ -80,16 +105,41 @@ TEST( TestLog, withPointers ) {
 	s_log_buf.clear();
 	void* vptr = nullptr;
 	lg_debg << vptr;
-//搞不定	ASSERT_EQ( s_log_buf, "{null-char*}" );
-	ASSERT_EQ( s_log_buf, "0" );
+	// 如果把 operator<<函数 放到 leon_log 空间内, 这里就能得到期望输出 "{null-void*}"
+	ASSERT_EQ( s_log_buf, "{null-void*}" );
 
 	s_log_buf.clear();
-	// 还是只能这样
 	{ Log_t lg{Debug}; lg << vptr; }
 	ASSERT_EQ( s_log_buf, "{null-void*}" );
 };
 
 }; // namespace leon_log
+
+// 在命名空间之外,再试试
+TEST( TestLogOutside, overloadingCustoms ) {
+	char* str_null { nullptr };
+	s_log_buf.clear();
+	lg_debg << str_null;
+	ASSERT_EQ( s_log_buf, "{null-char*}" );
+
+	s_log_buf.clear();
+	{ Log_t lg{Debug}; lg << str_null; }
+	ASSERT_EQ( s_log_buf, "{null-char*}" );
+
+	s_log_buf.clear();
+	void* vptr = nullptr;
+	lg_debg << vptr;
+	ASSERT_EQ( s_log_buf, "{null-void*}" );
+
+	s_log_buf.clear();
+	{ Log_t lg{Debug}; lg << vptr; }
+	ASSERT_EQ( s_log_buf, "{null-void*}" );
+
+	s_log_buf.clear();
+	leon_utl::U64_u u64 { "UStrView" };
+	lg_debg << u64;
+	ASSERT_EQ( s_log_buf, u64.str() );
+};
 
 GTEST_API_ int main( int argc, char** argv ) {
 

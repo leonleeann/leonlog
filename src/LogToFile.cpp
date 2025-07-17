@@ -326,8 +326,8 @@ extern "C" bool AppendLog( LogLevel_e level, const str_t& body ) {
 };
 
 // 设置写盘间隔(每隔多少秒确保保存一次,默认3s)
-extern "C" void SetFlushSeconds( SysDura_t int_ ) {
-	s_flush_ns = int_.count();
+extern "C" void SetFlushIntrvl( SysDura_t interval_ns_ ) {
+	s_flush_ns = interval_ns_.count();
 };
 
 // 设置退出等待时长(给日志线程多少时间清盘,默认1s)

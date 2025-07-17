@@ -2,14 +2,14 @@ cmake_minimum_required( VERSION 3.16.0 )
 
 set( PROJECT_VERSION_MAJOR 1 )   # 主版本
 set( PROJECT_VERSION_MINOR 9 )   # 次版本
-set( PROJECT_VERSION_PATCH 4 )   # 修订号(Bug fix)
+set( PROJECT_VERSION_PATCH 5 )   # 修订号(Bug fix)
 
 # 版本全串
 set( PROJECT_VERSION
 	${PROJECT_VERSION_MAJOR}.${PROJECT_VERSION_MINOR}.${PROJECT_VERSION_PATCH})
 
 # 版本说明
-set( PROJECT_VERSION_NOTES "Flush周期改为SysDura_t类型" )
+set( PROJECT_VERSION_NOTES "overload不同指针类型放到leon_log命名空间内，看看能否完美捕获" )
 
 # 项目描述
 set( PROJECT_DESCRIPTION   "线程安全的异步文件日志库" )
@@ -48,7 +48,7 @@ include_directories( "include" )
 ######## 主要模块 ###############################################################
 add_library( leonutl_static STATIC IMPORTED )
 set_property( TARGET leonutl_static PROPERTY
-	IMPORTED_LOCATION "/usr/local/lib/libLeonUtils.a.0.3.4" )
+	IMPORTED_LOCATION "/usr/local/lib/libLeonUtils.a.0.3.8" )
 add_library( objCommon OBJECT src/LogToFile.cpp )
 
 ######## 主要产出 ###############################################################
