@@ -1,14 +1,15 @@
 #pragma once
 #include <chrono>
 #include <functional>
-#include <leonutils/ChronoTypes.hpp>
+#include <leonutils/Chrono.hpp>
 #include <leonutils/UnionTypes.hpp>
 #include <sstream>
 #include <string>
 #include <type_traits>
 
-using str_t = std::string;
 using oss_t = std::ostringstream;
+using ost_t = std::ostream;
+using str_t = std::string;
 
 // 指针概念
 template<typename T>
@@ -179,8 +180,13 @@ inline Log_t& operator<<( Log_t& log_, const void* ptr_ ) {
 	return log_;
 };
 
-inline std::ostream& operator<<( std::ostream& os_, leon_utl::U64_u u_ ) {
+inline ost_t& operator<<( ost_t& os_, leon_utl::U64_u u_ ) {
 	return os_ << u_.view();
+};
+
+template <typename C, typename D>
+inline ost_t& operator<<( ost_t& os_, time_point<C, D> tp_ ) {
+	return os_ << leon_utl::fmt( tp_, 6, leon_utl::NEAT_FORMAT );
 };
 
 //-------------------------------------

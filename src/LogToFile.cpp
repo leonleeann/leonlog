@@ -489,7 +489,7 @@ inline void Write1Log( ofs_t& p_out, const LogEntry_t& log ) {
 	LogStamp_t tpSecPart =
 		time_point_cast<LogStamp_t::duration>(
 			std::chrono::floor<seconds>( log.stamp ) );
-	str_t time_str = format_time( tpSecPart, LOG_STAMP_FORMAT );
+	str_t time_str = fmt( tpSecPart, LOG_STAMP_FORMAT );
 
 	// 输出时戳(尽量不拼接字符串,应该快点?)
 	p_out << time_str;
