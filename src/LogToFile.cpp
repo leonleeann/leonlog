@@ -9,12 +9,12 @@
 #include <iomanip>
 #include <iostream>
 #include <leonutils/Chrono.hpp>
+#include <leonutils/CpuAffinity.hpp>
 #include <leonutils/CraflinRQ.tpp>
 #include <leonutils/Exceptions.hpp>
 #include <leonutils/MemoryOrder.hpp>
 #include <memory>
 #include <mutex>
-#include <sched.h>		// sched_setaffinity
 #include <semaphore.h>
 #include <shared_mutex>
 #include <sys/syscall.h>	// SYS_gettid
@@ -78,7 +78,7 @@ const str_t LOG_LEVEL_NAMES[] = {
 str_t ThreadId2Hex( thread::id my_id = std::this_thread::get_id() );
 
 // 写日志的线程体
-void WriterThreadBody();
+void WriterThreadBody( const str_t* run_on_cpus );
 
 // 日志线程的核心工作：出队日志，写日志
 void ProcessLogs();
@@ -170,6 +170,7 @@ extern "C" void StartLog( const str_t&	file_,
 						  LogLevel_e	levl_,
 						  size_t		prec_,
 						  size_t		capa_,
+						  const str_t&	cpus_,
 						  bool			head_,
 						  bool			stdo_,
 						  bool			stot_ ) {
@@ -190,7 +191,7 @@ extern "C" void StartLog( const str_t&	file_,
 
 	RegistThread( "MainThread" );
 	s_should_run.store( true, mo_release );
-	s_writer = std::thread( WriterThreadBody );
+	s_writer = std::thread( WriterThreadBody, &cpus_ );
 	steady_clock::time_point time_out = steady_clock::now() + 1s;
 	while( !s_is_running.load( mo_acquire ) && steady_clock::now() < time_out )
 		std::this_thread::sleep_for( 1ns );
@@ -381,7 +382,7 @@ void WriteStatus() {
 	s_wr_status( f );
 };
 
-void WriterThreadBody() {
+void WriterThreadBody( const str_t* cpus_ ) {
 	/* 如果本系统已被海量的日志淹没,日志线程会需要很久才能写完退出(尤其是日志队列用得很大时),
 	 * 导致本系统停止失败。 所以日志线程设置为可以立即终止。
 	int old_state = 0, old_type = 0;
@@ -394,6 +395,9 @@ void WriterThreadBody() {
 
 	// 日志线程自己也可以添加日志,当然就也可以注册有意义的线程名称
 	RegistThread( "Logger" );
+	// cpus_ 只在启动时存在, 一旦主线程离开 StartLog 函数, 就不能使用此对象了!!!
+	if( cpus_ != nullptr && ! cpus_->empty() )
+		PthreadOnlyCPU( *cpus_ );
 
 	while( s_should_run.load( mo_acquire ) ) {
 		ProcessLogs();
@@ -415,7 +419,7 @@ void WriterThreadBody() {
 
 void ProcessLogs() {
 	s_log_ofs = make_unique<ofs_t>( s_log_file,
-									   std::ios_base::out | std::ios_base::app );
+									std::ios_base::out | std::ios_base::app );
 	s_log_ofs->imbue( std::locale( "C" ) );
 	s_log_ofs->clear();
 
@@ -540,13 +544,6 @@ void RenameLogFile() {
 		new_path += old_path.extension();
 	}
 	rename( old_path, new_path );
-};
-
-extern "C" bool AffineCpu( int cpu_ ) {
-	cpu_set_t mask;
-	CPU_ZERO( &mask );
-	CPU_SET( cpu_, &mask );
-	return ( pthread_setaffinity_np( s_log_tid, sizeof( mask ), &mask ) == 0 );
 };
 
 }; // namespace leon_log

@@ -82,6 +82,7 @@ extern "C" void StartLog(
 	LogLevel_e		log_levl = LogLevel_e::Debug,		// 日志级别
 	size_t			stamp_precision = 6,				// 时戳精度
 	size_t			que_size = DEFAULT_LOG_QUE_SIZE,	// 日志队列容量
+	const str_t&	run_on_cpus = "",					// 只在哪些cpu上运行日志线程
 	bool			header = true,						// 启动时输出header
 	bool			stdout = true,						// 同时输出至stdout
 	bool			tstamp = false						// 输出至stdout的带不带时戳
@@ -118,9 +119,6 @@ extern "C" void SetLogStampPtr( const LogStamp_t* );
 
 // 轮转日志文件
 extern "C" void RotateLogFile( const str_t& infix /*中缀*/ );
-
-// 绑核到哪个 CPU. 其实绑核不如"nice值"和"调度优先级"更节约cpu
-extern "C" bool AffineCpu( int cpu );
 
 #ifdef DEBUG
 

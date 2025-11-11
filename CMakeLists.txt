@@ -1,15 +1,15 @@
 cmake_minimum_required( VERSION 3.16.0 )
 
 set( PROJECT_VERSION_MAJOR 1 )   # 主版本
-set( PROJECT_VERSION_MINOR 9 )   # 次版本
-set( PROJECT_VERSION_PATCH 9 )   # 修订号(Bug fix)
+set( PROJECT_VERSION_MINOR 10 )  # 次版本
+set( PROJECT_VERSION_PATCH 0 )   # 修订号(Bug fix)
 
 # 版本全串
 set( PROJECT_VERSION
 	${PROJECT_VERSION_MAJOR}.${PROJECT_VERSION_MINOR}.${PROJECT_VERSION_PATCH})
 
 # 版本说明
-set( PROJECT_VERSION_NOTES "适配leonutil_0_3_15" )
+set( PROJECT_VERSION_NOTES "适配leonutil_0_3_16，可以为日志线程绑核" )
 
 # 项目描述
 set( PROJECT_DESCRIPTION   "线程安全的异步文件日志库" )
@@ -48,7 +48,7 @@ include_directories( "include" )
 ######## 主要模块 ###############################################################
 add_library( leonutl_static STATIC IMPORTED )
 set_property( TARGET leonutl_static PROPERTY
-	IMPORTED_LOCATION "/usr/local/lib/libLeonUtils.a.0.3.15" )
+	IMPORTED_LOCATION "/usr/local/lib/libLeonUtils.a.0.3.16" )
 add_library( objCommon OBJECT src/LogToFile.cpp )
 
 ######## 主要产出 ###############################################################
@@ -66,10 +66,11 @@ set_target_properties( leonlog_static PROPERTIES
 target_sources( leonlog_static PUBLIC FILE_SET HEADERS BASE_DIRS "include"
 FILES
 	include/leonlog/LeonLog.hpp
+	include/leonlog/LogSet.hpp
 	include/leonlog/StatusFile.hpp
 	include/leonlog/ThreadName.hpp
 )
-target_link_libraries( leonlog_static objCommon leonutl_static Threads::Threads )
+target_link_libraries( leonlog_static PRIVATE objCommon leonutl_static Threads::Threads )
 install( TARGETS leonlog_static
 	ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
 	PUBLIC_HEADER DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
@@ -85,7 +86,7 @@ set_target_properties( leonlog_dynmic PROPERTIES
 	VERSION                ${PROJECT_VERSION}
 	SOVERSION              ${PROJECT_VERSION_MAJOR}
 )
-target_link_libraries( leonlog_dynmic objCommon leonutl_static Threads::Threads )
+target_link_libraries( leonlog_dynmic PRIVATE objCommon leonutl_static Threads::Threads )
 install( TARGETS leonlog_dynmic
 	ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
 	PUBLIC_HEADER DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}

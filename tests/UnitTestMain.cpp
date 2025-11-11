@@ -2,6 +2,7 @@
 #include <gtest/gtest.h>
 #include <iostream>
 #include <leonlog/LeonLog.hpp>
+#include <leonlog/LogSet.hpp>
 #include <sstream>
 
 using namespace leon_log;
@@ -111,6 +112,23 @@ TEST( TestLog, withPointers ) {
 	s_log_buf.clear();
 	{ Log_t lg{Debug}; lg << vptr; }
 	ASSERT_EQ( s_log_buf, "{null-void*}" );
+};
+
+TEST( TestLog, loggingSet ) {
+
+	IntSet_t int_set { 123, -1, 789 };
+	s_log_buf.clear();
+	lg_debg << int_set;
+	ASSERT_EQ( s_log_buf, "{-1,123,789,}" );
+
+	int_set.clear();
+	s_log_buf.clear();
+	lg_debg << int_set;
+	ASSERT_EQ( s_log_buf, "{}" );
+
+	s_log_buf.clear();
+	lg_debg << IntSet_t{};
+	ASSERT_EQ( s_log_buf, "{}" );
 };
 
 }; // namespace leon_log
