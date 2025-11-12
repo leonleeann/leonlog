@@ -13,12 +13,12 @@ using IntSet_t = set_t<int>;
 namespace leon_log {
 
 template<typename K, typename C = std::less<K>, typename A = std::allocator<K> >
-Log_t& operator<<( Log_t& lg_, const set_t<K, C, A>& ss_ ) {
+Log_t& operator<<( Log_t& lg_, const set_t<K, C, A>& set_ ) {
 
 	lg_ << '{';
 
-	for( auto& s : ss_ )
-		lg_ << s << ',';
+	for( auto& v : set_ )
+		lg_ << v << ',';
 
 	lg_ << '}';
 	return lg_;
