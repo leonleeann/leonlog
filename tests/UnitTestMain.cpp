@@ -10,6 +10,7 @@ using namespace std;
 using oss_t = std::ostringstream;
 using ost_t = std::ostream;
 using stv_t = std::string_view;
+using intset_t = set_t<int>;
 
 struct Custom_t {
 	str_t _data;
@@ -116,7 +117,7 @@ TEST( TestLog, withPointers ) {
 
 TEST( TestLog, loggingSet ) {
 
-	IntSet_t int_set { 123, -1, 789 };
+	intset_t int_set { 123, -1, 789 };
 	s_log_buf.clear();
 	lg_debg << int_set;
 	ASSERT_EQ( s_log_buf, "{-1,123,789,}" );
@@ -127,7 +128,7 @@ TEST( TestLog, loggingSet ) {
 	ASSERT_EQ( s_log_buf, "{}" );
 
 	s_log_buf.clear();
-	lg_debg << IntSet_t{};
+	lg_debg << intset_t{};
 	ASSERT_EQ( s_log_buf, "{}" );
 };
 
