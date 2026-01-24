@@ -242,6 +242,7 @@ extern "C" void StopLog( bool ft_, bool rn_, const str_t& infix_ ) {
 
 	if( sem_destroy( &s_new_log ) )
 		throw std::runtime_error( "信号量销毁失败!" );
+	s_log_que = nullptr;
 };
 
 extern "C" bool IsLogging() {

@@ -2,14 +2,14 @@ cmake_minimum_required( VERSION 3.25.0 )
 
 set( PROJECT_VERSION_MAJOR 1 )   # 主版本
 set( PROJECT_VERSION_MINOR 10 )  # 次版本
-set( PROJECT_VERSION_PATCH 4 )   # 修订号(Bug fix)
+set( PROJECT_VERSION_PATCH 5 )   # 修订号(Bug fix)
 
 # 版本全串
 set( PROJECT_VERSION
 	${PROJECT_VERSION_MAJOR}.${PROJECT_VERSION_MINOR}.${PROJECT_VERSION_PATCH})
 
 # 版本说明
-set( PROJECT_VERSION_NOTES "适配leonutil_0_3_21" )
+set( PROJECT_VERSION_NOTES "Bugfix_关闭时销毁日志队列，避免死得难看" )
 
 # 项目描述
 set( PROJECT_DESCRIPTION   "线程安全的异步文件日志库" )
