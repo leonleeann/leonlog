@@ -2,13 +2,13 @@ cmake_minimum_required( VERSION 3.25.0 )
 
 set( PROJECT_VERSION_MAJOR 1 )   # 主版本
 set( PROJECT_VERSION_MINOR 10 )  # 次版本
-set( PROJECT_VERSION_PATCH 7 )   # 修订号(Bug fix)
+set( PROJECT_VERSION_PATCH 8 )   # 修订号(Bug fix)
 
 # 版本全串
 set( PROJECT_VERSION ${PROJECT_VERSION_MAJOR}.${PROJECT_VERSION_MINOR}.${PROJECT_VERSION_PATCH})
 
 # 版本说明
-set( PROJECT_VERSION_NOTES	"适配leonutil_0_3_23干脆只生成静态库" )
+set( PROJECT_VERSION_NOTES	"日志入队尽量避免复制对象" )
 
 # 项目描述
 set( PROJECT_DESCRIPTION	"线程安全的异步文件日志库" )
@@ -73,7 +73,7 @@ target_sources( leonlog_static PUBLIC FILE_SET HEADERS BASE_DIRS "include" FILES
 	include/leonlog/StatusFile.hpp
 	include/leonlog/ThreadName.hpp
 )
-target_link_libraries( leonlog_static PUBLIC objCommon LeonUtils Threads::Threads )
+target_link_libraries( leonlog_static PUBLIC objCommon LeonUtils PRIVATE Threads::Threads )
 install( TARGETS leonlog_static
 	ARCHIVE			DESTINATION	${CMAKE_INSTALL_LIBDIR}
 	PUBLIC_HEADER	DESTINATION	${CMAKE_INSTALL_INCLUDEDIR}

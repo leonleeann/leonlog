@@ -25,8 +25,8 @@ LogLevel_e	g_log_level = LogLevel_e::Debug;
 str_t		s_log_buf;
 
 // 这是 AppendLog 的 fake
-extern "C" bool AppendLog( LogLevel_e, const str_t& body_ ) {
-
+template <typename T>
+bool AppendLog( LogLevel_e, T&& body_ ) {
 	s_log_buf = body_;
 	return true;
 };

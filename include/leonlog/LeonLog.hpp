@@ -73,11 +73,11 @@ extern LogLevel_e g_log_level;
 // 队列再大也只是缓冲突发的日志，如果产生日志持续比消费日志快, 再大的队列也会爆...
 constexpr size_t DEFAULT_LOG_QUE_SIZE = 256;
 
-extern "C" const char* Version();
-extern "C" const char* NameOf( LogLevel_e );
+const char* Version();
+const char* NameOf( LogLevel_e );
 
 // 指定日志文件名, 启动日志系统
-extern "C" void StartLog(
+void StartLog(
 	const str_t&	log_file,							// 日志文件路径及名称
 	LogLevel_e		log_levl = LogLevel_e::Debug,		// 日志级别
 	size_t			stamp_precision = 6,				// 时戳精度
@@ -89,36 +89,37 @@ extern "C" void StartLog(
 );  // 队列容量
 
 // 关闭日志, 并Flush所有日志到磁盘
-extern "C" void StopLog(
+void StopLog(
 	bool			footer = true,	// 是否在日志尾部输出 footer
 	bool			rename = true,	// 关闭日志文件后是否改名
 	const str_t&	infix = ""		// 改名的中缀
 );
 // 日志系统正在运行
-extern "C" bool IsLogging();
+bool IsLogging();
 // 显示错误信息,关闭日志并退出
-extern "C" void ExitWithLog( const str_t& );
+void ExitWithLog( const str_t& );
 
 // 在fork后的子进程内关闭日志,因为此时没有writer线程,只能静默释放资源
-// extern "C" void _stopLogging();
+// void _stopLogging();
 
 // 为当前线程登记一个名字,此后输出该线程的日志会包含此名，而非线程Id
-extern "C" void RegistThread( const str_t& );
+void RegistThread( const str_t& );
 
 // 添加日志的主函数
-extern "C" bool AppendLog( LogLevel_e, const str_t& body );
+template <typename T>
+bool AppendLog( LogLevel_e, T&& body );
 
 // 设置写盘间隔(每隔多少秒确保保存一次,默认1s)
-extern "C" void SetFlushIntrvl( leon_utl::SysDura_t interval );
+void SetFlushIntrvl( leon_utl::SysDura_t interval );
 
 // 设置退出等待时长(给日志线程多少时间清盘,默认3s)
-extern "C" void SetExitSeconds( unsigned int secs );
+void SetExitSeconds( unsigned int secs );
 
 // 设置一个存放时间戳的指针,之后输出日志时都会去那个地址找时戳
-extern "C" void SetLogStampPtr( const LogStamp_t* );
+void SetLogStampPtr( const LogStamp_t* );
 
 // 轮转日志文件
-extern "C" void RotateLogFile( const str_t& infix /*中缀*/ );
+void RotateLogFile( const str_t& infix /*中缀*/ );
 
 #ifdef DEBUG
 

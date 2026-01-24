@@ -56,6 +56,14 @@ struct LogEntry_t {
 	str_t		tname;	// 产生日志的线程
 	str_t		body;	// 日志内容
 	LogLevel_e	level;	// 日志级别
+
+	template <typename T>
+	LogEntry_t( LogStamp_t stamp_, const str_t& thread_, T&& body_, LogLevel_e level_ ):
+		stamp( stamp_ ),
+		tname( thread_ ),
+		body( std::forward<T>( body_ ) ),
+		level( level_ )
+	{};
 };
 
 // LogQue_t: 日志队列(一个队列服务整个APP)
@@ -158,22 +166,22 @@ inline str_t ThreadId2Hex( thread::id thread_id ) {
 
 //==== 实现API的几个函数 ==============
 
-extern "C" const char* Version() {
+const char* Version() {
 	return PROJECT_VERSION;
 };
 
-extern "C" const char* NameOf( LogLevel_e ll ) {
+const char* NameOf( LogLevel_e ll ) {
 	return LOG_LEVEL_NAMES[ll].c_str();
 };
 
-extern "C" void StartLog( const str_t&	file_,
-						  LogLevel_e	levl_,
-						  size_t		prec_,
-						  size_t		capa_,
-						  const str_t&	cpus_,
-						  bool			head_,
-						  bool			stdo_,
-						  bool			stot_ ) {
+void StartLog( const str_t&	file_,
+			   LogLevel_e	levl_,
+			   size_t		prec_,
+			   size_t		capa_,
+			   const str_t&	cpus_,
+			   bool			head_,
+			   bool			stdo_,
+			   bool			stot_ ) {
 	if( s_is_running.load( mo_acquire ) )
 		throw bad_usage( "日志系统已启动, 不能重复初始化!" );
 
@@ -203,7 +211,7 @@ extern "C" void StartLog( const str_t&	file_,
 	}
 };
 
-extern "C" void StopLog( bool ft_, bool rn_, const str_t& infix_ ) {
+void StopLog( bool ft_, bool rn_, const str_t& infix_ ) {
 	if( !s_is_running.load( mo_acquire ) )
 // 		throw bad_usage( "日志系统尚未启动, 怎么关闭?" );
 		return;
@@ -245,11 +253,11 @@ extern "C" void StopLog( bool ft_, bool rn_, const str_t& infix_ ) {
 	s_log_que = nullptr;
 };
 
-extern "C" bool IsLogging() {
+bool IsLogging() {
 	return s_is_running.load( mo_acquire );
 };
 
-extern "C" void ExitWithLog( const str_t& err ) {
+void ExitWithLog( const str_t& err ) {
 	std::cerr << err << std::endl;
 
 	if( s_is_running.load( mo_acquire ) ) {
@@ -259,7 +267,7 @@ extern "C" void ExitWithLog( const str_t& err ) {
 	exit( EXIT_FAILURE );
 };
 
-/* extern "C" void _stopLogging() {
+/* void _stopLogging() {
 	try {
 		s_is_running.store( false, mo_release );
 		s_should_run.store( false, mo_release );
@@ -278,46 +286,50 @@ extern "C" void ExitWithLog( const str_t& err ) {
 	};
 }; */
 
-extern Names2LinuxTId_t LinuxThreadIds() {
+Names2LinuxTId_t LinuxThreadIds() {
 	shared_lock<shared_mutex> sh_lk( s_mtx4nids );
 	Names2LinuxTId_t result { s_t_ids };
 	return result;
 };
 
 // 登记一个线程名, 此后输出该线程的日志时, 会包含此名，而非线程Id
-extern "C" void RegistThread( const str_t& my_name ) {
+void RegistThread( const str_t& my_name ) {
 	tl_t_name = my_name;
 	unique_lock<shared_mutex> ex_lk( s_mtx4nids );
 	s_t_ids[my_name] = syscall( SYS_gettid );
 };
 
 // 添加日志的主函数, 此处是实现。此函数只是把日志加入队列, 等待日志线程来写入文件
-extern "C" bool AppendLog( LogLevel_e level, const str_t& body ) {
+template <typename T>
+bool AppendLog( LogLevel_e level_, T&& body_ ) {
 	// 只有不低于门限值的日志才能得到输出
-	if( level < g_log_level )
+	if( level_ < g_log_level )
 		return false;
 
 	// 日志系统必须已经启动
 	if( ! s_is_running.load( mo_acquire ) ) {
-		cerr << LOG_LEVEL_NAMES[level]
-			 << ",早期日志," << tl_t_name << ',' << body << "\n";
+		cerr << LOG_LEVEL_NAMES[level_]
+			 << ",早期日志," << tl_t_name << ',' << body_ << "\n";
 		return true;
 	}
 
-	// 日志入队
-	LogEntry_t le { tl_stamp != nullptr ? *tl_stamp : system_clock::now(),
-					tl_t_name, body, level, };
+	// 时戳不能反复取, 入队失败重试还要用这个时戳
+	LogStamp_t stamp = tl_stamp ? *tl_stamp : system_clock::now();
 
 	// 日志入队重试次数
 	constexpr int ENQUE_RETRIES = 10;
 	auto tries = ENQUE_RETRIES;
-	while( ! s_log_que->enque( le ) ) {
+
+	// 日志入队
+	while( ! s_log_que->enque(
+				LogEntry_t( stamp, tl_t_name,
+							std::forward<T>( body_ ), level_ ) ) ) {
 		sem_post( &s_new_log );
 		--tries;
 		if( tries <= 0 ) {
 			cerr << LOG_LEVEL_NAMES[LogLevel_e::Error]
 				 << "," << tl_t_name << ",日志入队失败,抛弃日志:"
-				 << body << endl;
+				 << body_ << endl;
 			return false;
 		}
 	};
@@ -326,22 +338,25 @@ extern "C" bool AppendLog( LogLevel_e level, const str_t& body ) {
 	sem_post( &s_new_log );
 	return true;
 };
+template bool AppendLog<const str_t&>( LogLevel_e, const str_t& );
+template bool AppendLog<str_t&>( LogLevel_e, str_t& );
+template bool AppendLog<str_t>( LogLevel_e, str_t&& );
 
 // 设置写盘间隔(每隔多少秒确保保存一次,默认3s)
-extern "C" void SetFlushIntrvl( SysDura_t interval_ns_ ) {
+void SetFlushIntrvl( SysDura_t interval_ns_ ) {
 	s_flush_ns = interval_ns_.count();
 };
 
 // 设置退出等待时长(给日志线程多少时间清盘,默认1s)
-extern "C" void SetExitSeconds( unsigned int secs ) {
+void SetExitSeconds( unsigned int secs ) {
 	s_exit_secs = secs;
 };
 
-extern "C" void SetLogStampPtr( const LogStamp_t* tstamp ) {
+void SetLogStampPtr( const LogStamp_t* tstamp ) {
 	tl_stamp = tstamp;
 };
 
-extern "C" void RotateLogFile( const str_t& infix ) {
+void RotateLogFile( const str_t& infix ) {
 // 本函数不会直接改名日志文件,只是置位全局变量,由日志线程完成真正的改名
 // 先确保日志线程真的进入事件循环,否则它首次进入事件循环就会去轮转日志
 	steady_clock::time_point time_out = steady_clock::now() + 100ms;
@@ -363,7 +378,7 @@ extern "C" void RotateLogFile( const str_t& infix ) {
 	}
 };
 
-extern "C" void SetStatus( const str_t& file_, WriteStatus_f writer_, int secs_ ) {
+void SetStatus( const str_t& file_, WriteStatus_f writer_, int secs_ ) {
 	s_status_file = file_;
 	s_wr_status = writer_;
 	s_status_interval = seconds( secs_ );
@@ -429,7 +444,7 @@ void ProcessLogs() {
 	timespec_get( &tsNextFlush, TIME_UTC );
 	tsNextFlush += s_flush_ns;
 
-	LogEntry_t aLog { system_clock::now(), "Logger", {}, LogLevel_e::Infor, };
+	LogEntry_t aLog {system_clock::now(), "Logger", str_t{}, LogLevel_e::Infor};
 	if( s_is_rolling.load( mo_acquire ) ) {
 		aLog.body = "---------- 日志文件已轮转 ----------";
 		Write1Log( *s_log_ofs, aLog );

@@ -13,8 +13,9 @@ install( TARGETS ut-leonlog RUNTIME DESTINATION testing )
 add_library( objTestLog OBJECT testLogging.cpp )
 add_executable( s-log )
 target_link_libraries( s-log
-	objTestLog
-	leonlog_static
+	objTestLog objCommon
+	LeonUtils
+#	LeonLog
 	Threads::Threads
 )
 install( TARGETS s-log RUNTIME DESTINATION testing )
