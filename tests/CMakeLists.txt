@@ -19,14 +19,14 @@ target_link_libraries( s-log
 )
 install( TARGETS s-log RUNTIME DESTINATION testing )
 
-#======== 动态版 =====================
+#[[======== 动态版 =====================
 add_executable( d-log )
 target_link_libraries( d-log
 	objTestLog
 	leonlog_dynmic
 	Threads::Threads
 )
-install( TARGETS d-log RUNTIME DESTINATION testing )
+install( TARGETS d-log RUNTIME DESTINATION testing )]]
 
 #[[======== test forking =====================
 add_executable( testForking testForking.cpp )
@@ -47,8 +47,5 @@ install( TARGETS testPressure RUNTIME DESTINATION testing )
 
 #======== test syslog =====================
 add_executable( testSyslog testSyslog.cpp )
-target_link_libraries( testSyslog
-	leonutl_static
-	Threads::Threads
-)
+target_link_libraries( testSyslog LeonUtils Threads::Threads )
 install( TARGETS testSyslog RUNTIME DESTINATION testing )

@@ -2,22 +2,21 @@ cmake_minimum_required( VERSION 3.25.0 )
 
 set( PROJECT_VERSION_MAJOR 1 )   # 主版本
 set( PROJECT_VERSION_MINOR 10 )  # 次版本
-set( PROJECT_VERSION_PATCH 6 )   # 修订号(Bug fix)
+set( PROJECT_VERSION_PATCH 7 )   # 修订号(Bug fix)
 
 # 版本全串
-set( PROJECT_VERSION
-	${PROJECT_VERSION_MAJOR}.${PROJECT_VERSION_MINOR}.${PROJECT_VERSION_PATCH})
+set( PROJECT_VERSION ${PROJECT_VERSION_MAJOR}.${PROJECT_VERSION_MINOR}.${PROJECT_VERSION_PATCH})
 
 # 版本说明
-set( PROJECT_VERSION_NOTES "适配leonutil_0_3_22" )
+set( PROJECT_VERSION_NOTES	"适配leonutil_0_3_23干脆只生成静态库" )
 
 # 项目描述
-set( PROJECT_DESCRIPTION   "线程安全的异步文件日志库" )
+set( PROJECT_DESCRIPTION	"线程安全的异步文件日志库" )
 
 project( LeonLog
-	VERSION     ${PROJECT_VERSION}
-	DESCRIPTION ${PROJECT_DESCRIPTION}
-	LANGUAGES CXX
+	VERSION		${PROJECT_VERSION}
+	DESCRIPTION	${PROJECT_DESCRIPTION}
+	LANGUAGES	CXX
 )
 configure_file( Version.hpp.in Version.hpp )
 
@@ -42,15 +41,18 @@ find_package( GTest REQUIRED )
 
 # 对任何头文件的搜索都可 以本目录为根开始
 set( CMAKE_INCLUDE_CURRENT_DIR ON )
-include_directories( "." )
+# 不知道下面这句与上面一句有何区别
+include_directories( "." )	# 这不是本文件的目录！是包含者文件的目录！！！
 include_directories( "include" )
 
 ######## 主要模块 ###############################################################
 add_library( objCommon OBJECT src/LogToFile.cpp )
+#[[
 add_library( leonutl_static STATIC IMPORTED )
 set_property( TARGET leonutl_static PROPERTY IMPORTED_LOCATION "/usr/local/lib/libLeonUtils.a" )
 add_library( leonutl_shared SHARED IMPORTED )
 set_property( TARGET leonutl_shared PROPERTY IMPORTED_LOCATION "/usr/local/lib/libLeonUtils.so" )
+]]
 
 ######## 主要产出 ###############################################################
 #======== 静态版 ================================================================
@@ -60,32 +62,31 @@ set_target_properties( leonlog_static PROPERTIES
 	OUTPUT_NAME_DEBUG		LeonLog
 #	PUBLIC_HEADER			LeonLog.hpp
 	VERSION					${PROJECT_VERSION}
-	SUFFIX					".a.${PROJECT_VERSION}"
+#	SUFFIX					".a.${PROJECT_VERSION}"
 #	ARCHIVE_OUTPUT_NAME_RELEASE  "ARCHIVE_OUTPUT_NAME_.${PROJECT_VERSION}"
 #	LIBRARY_OUTPUT_NAME_RELEASE  "LIBRARY_OUTPUT_NAME_.${PROJECT_VERSION}"
 	ENABLE_EXPORTS	TRUE	# CMake 3.4 之后必须显示指定, 确保策略需要调用的函数存在
 )
-target_sources( leonlog_static PUBLIC FILE_SET HEADERS BASE_DIRS "include"
-FILES
+target_sources( leonlog_static PUBLIC FILE_SET HEADERS BASE_DIRS "include" FILES
 	include/leonlog/LeonLog.hpp
 	include/leonlog/LogSet.hpp
 	include/leonlog/StatusFile.hpp
 	include/leonlog/ThreadName.hpp
 )
-target_link_libraries( leonlog_static PUBLIC objCommon leonutl_static Threads::Threads )
+target_link_libraries( leonlog_static PUBLIC objCommon LeonUtils Threads::Threads )
 install( TARGETS leonlog_static
 	ARCHIVE			DESTINATION	${CMAKE_INSTALL_LIBDIR}
 	PUBLIC_HEADER	DESTINATION	${CMAKE_INSTALL_INCLUDEDIR}
-	FILE_SET		HEADERS
-)
-# 自己创建软链(CMake不会帮 静态库 做这个, 只会为 *.so 做)
+	FILE_SET		HEADERS )
+
+#[[ 自己创建软链(CMake不会帮 静态库 做这个, 只会为 *.so 做)
 install( CODE "execute_process(
 	COMMAND ${CMAKE_COMMAND} -E create_symlink
 		$<TARGET_FILE_NAME:leonlog_static>
 		$<TARGET_FILE_PREFIX:leonlog_static>$<TARGET_FILE_BASE_NAME:leonlog_static>.a
-	WORKING_DIRECTORY ${CMAKE_INSTALL_PREFIX}/lib )" )
+	WORKING_DIRECTORY ${CMAKE_INSTALL_PREFIX}/lib )" )]]
 
-#======== 动态版 ================================================================
+#[[======== 动态版(没人用, 追求性能都是静态链接) ====================================
 add_library( leonlog_dynmic SHARED )
 set_target_properties( leonlog_dynmic PROPERTIES
 	OUTPUT_NAME_RELEASE		LeonLog
@@ -98,7 +99,7 @@ target_link_libraries( leonlog_dynmic PUBLIC objCommon leonutl_shared Threads::T
 install( TARGETS leonlog_dynmic
 	ARCHIVE			DESTINATION	${CMAKE_INSTALL_LIBDIR}
 	PUBLIC_HEADER	DESTINATION	${CMAKE_INSTALL_INCLUDEDIR}
-)
+)]]
 
 ######## 单元测试 ###############################################################
 add_subdirectory( tests )
