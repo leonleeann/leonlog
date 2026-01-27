@@ -22,8 +22,8 @@
 #include <thread>
 #include <unistd.h>		// syscall
 
-#include "Version.hpp"
 #include "leonlog/LeonLog.hpp"
+#include "leonlog/LeonLogVer.hpp"
 #include "leonlog/StatusFile.hpp"
 #include "leonlog/ThreadName.hpp"
 
