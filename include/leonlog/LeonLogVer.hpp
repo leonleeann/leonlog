@@ -4,9 +4,9 @@
 
 #define PROJECT_VERSION_MAJOR (1)
 #define PROJECT_VERSION_MINOR (10)
-#define PROJECT_VERSION_PATCH (9)
+#define PROJECT_VERSION_PATCH (10)
 #define PROJECT_RELEASE_NOTES ("")
-#define PROJECT_VERSION       ("1.10.9")
+#define PROJECT_VERSION       ("1.10.10")
 #define PROJECT_DESCRIPTION   ("线程安全的异步文件日志库")
 
 #define APP_NAME ("")
