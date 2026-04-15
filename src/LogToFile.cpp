@@ -58,7 +58,7 @@ struct LogEntry_t {
 	LogLevel_e	level;	// 日志级别
 
 	template <typename T>
-	LogEntry_t( LogStamp_t stamp_, const str_t& thread_, T&& body_, LogLevel_e level_ ):
+	LogEntry_t( LogStamp_t stamp_, str_cr thread_, T&& body_, LogLevel_e level_ ):
 		stamp( stamp_ ),
 		tname( thread_ ),
 		body( std::forward<T>( body_ ) ),
@@ -174,11 +174,11 @@ const char* NameOf( LogLevel_e ll ) {
 	return LOG_LEVEL_NAMES[ll].c_str();
 };
 
-void StartLog( const str_t&	file_,
+void StartLog( str_cr	file_,
 			   LogLevel_e	levl_,
 			   size_t		prec_,
 			   size_t		capa_,
-			   const str_t&	cpus_,
+			   str_cr	cpus_,
 			   bool			head_,
 			   bool			stdo_,
 			   bool			stot_ ) {
@@ -211,7 +211,7 @@ void StartLog( const str_t&	file_,
 	}
 };
 
-void StopLog( bool ft_, bool rn_, const str_t& infix_ ) {
+void StopLog( bool ft_, bool rn_, str_cr infix_ ) {
 	if( !s_is_running.load( mo_acquire ) )
 // 		throw bad_usage( "日志系统尚未启动, 怎么关闭?" );
 		return;
@@ -257,7 +257,7 @@ bool IsLogging() {
 	return s_is_running.load( mo_acquire );
 };
 
-void ExitWithLog( const str_t& err ) {
+void ExitWithLog( str_cr err ) {
 	std::cerr << err << std::endl;
 
 	if( s_is_running.load( mo_acquire ) ) {
@@ -293,7 +293,7 @@ Names2LinuxTId_t LinuxThreadIds() {
 };
 
 // 登记一个线程名, 此后输出该线程的日志时, 会包含此名，而非线程Id
-void RegistThread( const str_t& my_name ) {
+void RegistThread( str_cr my_name ) {
 	tl_t_name = my_name;
 	unique_lock<shared_mutex> ex_lk( s_mtx4nids );
 	s_t_ids[my_name] = syscall( SYS_gettid );
@@ -338,7 +338,7 @@ bool AppendLog( LogLevel_e level_, T&& body_ ) {
 	sem_post( &s_new_log );
 	return true;
 };
-template bool AppendLog<const str_t&>( LogLevel_e, const str_t& );
+template bool AppendLog<str_cr>( LogLevel_e, str_cr );
 template bool AppendLog<str_t&>( LogLevel_e, str_t& );
 template bool AppendLog<str_t>( LogLevel_e, str_t&& );
 
@@ -356,7 +356,7 @@ void SetLogStampPtr( const LogStamp_t* tstamp ) {
 	tl_stamp = tstamp;
 };
 
-void RotateLogFile( const str_t& infix ) {
+void RotateLogFile( str_cr infix ) {
 // 本函数不会直接改名日志文件,只是置位全局变量,由日志线程完成真正的改名
 // 先确保日志线程真的进入事件循环,否则它首次进入事件循环就会去轮转日志
 	steady_clock::time_point time_out = steady_clock::now() + 100ms;
@@ -378,7 +378,7 @@ void RotateLogFile( const str_t& infix ) {
 	}
 };
 
-void SetStatus( const str_t& file_, WriteStatus_f writer_, int secs_ ) {
+void SetStatus( str_cr file_, WriteStatus_f writer_, int secs_ ) {
 	s_status_file = file_;
 	s_wr_status = writer_;
 	s_status_interval = seconds( secs_ );

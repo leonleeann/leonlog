@@ -3,13 +3,14 @@
 #include <iosfwd>
 
 using str_t = std::string;
+using str_cr = const str_t&;
 
 namespace leon_log {
 
 using WriteStatus_f = std::function<void( std::ostream& )>;
 
 // 每隔 n 秒输出一次状态
-extern "C" void SetStatus( const str_t&		to_file,	// 输出文件全路径及全名
+extern "C" void SetStatus( str_cr		to_file,	// 输出文件全路径及全名
 						   WriteStatus_f	writer,		// 输出状态内容的回调函数
 						   int				intrvl		// 输出时间间隔
 						 );

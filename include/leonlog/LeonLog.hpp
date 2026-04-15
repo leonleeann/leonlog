@@ -10,6 +10,7 @@
 using oss_t = std::ostringstream;
 using ost_t = std::ostream;
 using str_t = std::string;
+using str_cr = const str_t&;
 
 // 指针概念
 template<typename T>
@@ -78,32 +79,32 @@ const char* NameOf( LogLevel_e );
 
 // 指定日志文件名, 启动日志系统
 void StartLog(
-	const str_t&	log_file,							// 日志文件路径及名称
-	LogLevel_e		log_levl = LogLevel_e::Debug,		// 日志级别
-	size_t			stamp_precision = 6,				// 时戳精度
-	size_t			que_size = DEFAULT_LOG_QUE_SIZE,	// 日志队列容量
-	const str_t&	run_on_cpus = "",					// 只在哪些cpu上运行日志线程
-	bool			header = true,						// 启动时输出header
-	bool			stdout = true,						// 同时输出至stdout
-	bool			tstamp = false						// 输出至stdout的带不带时戳
+	str_cr		log_file,							// 日志文件路径及名称
+	LogLevel_e	log_levl = LogLevel_e::Debug,		// 日志级别
+	size_t		stamp_precision = 6,				// 时戳精度
+	size_t		que_size = DEFAULT_LOG_QUE_SIZE,	// 日志队列容量
+	str_cr		run_on_cpus = "",					// 只在哪些cpu上运行日志线程
+	bool		header = true,						// 启动时输出header
+	bool		stdout = true,						// 同时输出至stdout
+	bool		tstamp = false						// 输出至stdout的带不带时戳
 );  // 队列容量
 
 // 关闭日志, 并Flush所有日志到磁盘
 void StopLog(
 	bool			footer = true,	// 是否在日志尾部输出 footer
 	bool			rename = true,	// 关闭日志文件后是否改名
-	const str_t&	infix = ""		// 改名的中缀
+	str_cr	infix = ""		// 改名的中缀
 );
 // 日志系统正在运行
 bool IsLogging();
 // 显示错误信息,关闭日志并退出
-void ExitWithLog( const str_t& );
+void ExitWithLog( str_cr );
 
 // 在fork后的子进程内关闭日志,因为此时没有writer线程,只能静默释放资源
 // void _stopLogging();
 
 // 为当前线程登记一个名字,此后输出该线程的日志会包含此名，而非线程Id
-void RegistThread( const str_t& );
+void RegistThread( str_cr );
 
 // 添加日志的主函数
 template <typename T>
@@ -119,7 +120,7 @@ void SetExitSeconds( unsigned int secs );
 void SetLogStampPtr( const LogStamp_t* );
 
 // 轮转日志文件
-void RotateLogFile( const str_t& infix /*中缀*/ );
+void RotateLogFile( str_cr infix /*中缀*/ );
 
 #ifdef DEBUG
 

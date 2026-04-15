@@ -8,7 +8,7 @@ set( PROJECT_VERSION_PATCH 10 )   # 修订号(Bug fix)
 set( PROJECT_VERSION ${PROJECT_VERSION_MAJOR}.${PROJECT_VERSION_MINOR}.${PROJECT_VERSION_PATCH} )
 
 # 版本说明
-set( PROJECT_VERSION_NOTES	"适配leonutils_0_3_28" )
+set( PROJECT_VERSION_NOTES	"适配leonutils_0_3_30" )
 
 # 项目描述
 set( PROJECT_DESCRIPTION	"线程安全的异步文件日志库" )
