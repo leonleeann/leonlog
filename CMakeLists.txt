@@ -2,13 +2,13 @@ cmake_minimum_required( VERSION 3.25.0 )
 
 set( PROJECT_VERSION_MAJOR 1 )   # 主版本
 set( PROJECT_VERSION_MINOR 10 )  # 次版本
-set( PROJECT_VERSION_PATCH 10 )   # 修订号(Bug fix)
+set( PROJECT_VERSION_PATCH 11 )  # 修订号(Bug fix)
 
 # 版本全串
 set( PROJECT_VERSION ${PROJECT_VERSION_MAJOR}.${PROJECT_VERSION_MINOR}.${PROJECT_VERSION_PATCH} )
 
 # 版本说明
-set( PROJECT_VERSION_NOTES	"适配leonutils_0_3_30" )
+set( PROJECT_VERSION_NOTES	"const char*别名char_cp" )
 
 # 项目描述
 set( PROJECT_DESCRIPTION	"线程安全的异步文件日志库" )

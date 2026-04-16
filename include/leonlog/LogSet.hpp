@@ -5,6 +5,8 @@
 template<typename K, typename C = std::less<K>, typename A = std::allocator<K> >
 using set_t = std::set<K, C, A>;
 
+using strset_t = set_t<str_t>;		using strset_cr = const strset_t&;
+
 // 好像运算符重载要放入 leon_log::Log_t 所在的命名空间才能匹配到
 namespace leon_log {
 

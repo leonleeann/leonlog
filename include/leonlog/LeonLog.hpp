@@ -7,10 +7,10 @@
 #include <string>
 #include <type_traits>
 
+using char_cp = const char*;
 using oss_t = std::ostringstream;
 using ost_t = std::ostream;
-using str_t = std::string;
-using str_cr = const str_t&;
+using str_t = std::string;	using str_cp = const str_t*; using str_cr = const str_t&;
 
 // 指针概念
 template<typename T>
@@ -74,8 +74,8 @@ extern LogLevel_e g_log_level;
 // 队列再大也只是缓冲突发的日志，如果产生日志持续比消费日志快, 再大的队列也会爆...
 constexpr size_t DEFAULT_LOG_QUE_SIZE = 256;
 
-const char* Version();
-const char* NameOf( LogLevel_e );
+char_cp Version();
+char_cp NameOf( LogLevel_e );
 
 // 指定日志文件名, 启动日志系统
 void StartLog(
@@ -158,7 +158,7 @@ public:
 /*-------------------------------------
 	为了特殊处理指针, 当遭遇空指针时, 能够输出诸如 "{null-char*}", "{null-void*}"...
 	这样的玩意, 而非直接崩溃, 所以试试针对特定类型做 overload. */
-inline Log_t& operator<<( Log_t& log_, const char* ptr_ ) {
+inline Log_t& operator<<( Log_t& log_, char_cp ptr_ ) {
 	if( log_._level < leon_log::g_log_level )
 		return log_;
 
@@ -194,7 +194,7 @@ inline ost_t& operator<<( ost_t& os_, time_point<C, D> tp_ ) {
 };	// namespace leon_log ======================================================
 
 /* operator<<函数的overload, 在不同的命名空间内似乎不一定能被用上, 试试在地板上也放一个
-inline leon_log::Log_t& operator<<( leon_log::Log_t& log_, const char* ptr_ ) {
+inline leon_log::Log_t& operator<<( leon_log::Log_t& log_, char_cp ptr_ ) {
 	return leon_log::operator<<( log_, ptr_ );
 };
 inline leon_log::Log_t& operator<<( leon_log::Log_t& log_, const void* ptr_ ) {

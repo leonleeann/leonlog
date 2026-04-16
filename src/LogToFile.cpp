@@ -86,7 +86,7 @@ const str_t LOG_LEVEL_NAMES[] = {
 str_t ThreadId2Hex( thread::id my_id = std::this_thread::get_id() );
 
 // 写日志的线程体
-void WriterThreadBody( const str_t* run_on_cpus );
+void WriterThreadBody( str_cp run_on_cpus );
 
 // 日志线程的核心工作：出队日志，写日志
 void ProcessLogs();
@@ -166,22 +166,16 @@ inline str_t ThreadId2Hex( thread::id thread_id ) {
 
 //==== 实现API的几个函数 ==============
 
-const char* Version() {
+char_cp Version() {
 	return PROJECT_VERSION;
 };
 
-const char* NameOf( LogLevel_e ll ) {
+char_cp NameOf( LogLevel_e ll ) {
 	return LOG_LEVEL_NAMES[ll].c_str();
 };
 
-void StartLog( str_cr	file_,
-			   LogLevel_e	levl_,
-			   size_t		prec_,
-			   size_t		capa_,
-			   str_cr	cpus_,
-			   bool			head_,
-			   bool			stdo_,
-			   bool			stot_ ) {
+void StartLog( str_cr file_, LogLevel_e levl_, size_t prec_, size_t capa_,
+			   str_cr cpus_, bool head_, bool stdo_, bool stot_ ) {
 	if( s_is_running.load( mo_acquire ) )
 		throw bad_usage( "日志系统已启动, 不能重复初始化!" );
 
@@ -398,7 +392,7 @@ void WriteStatus() {
 	s_wr_status( f );
 };
 
-void WriterThreadBody( const str_t* cpus_ ) {
+void WriterThreadBody( str_cp cpus_ ) {
 	/* 如果本系统已被海量的日志淹没,日志线程会需要很久才能写完退出(尤其是日志队列用得很大时),
 	 * 导致本系统停止失败。 所以日志线程设置为可以立即终止。
 	int old_state = 0, old_type = 0;
@@ -501,7 +495,7 @@ void ProcessLogs() {
 	s_log_ofs = nullptr;
 };
 
-const char* const LOG_STAMP_FORMAT = "%y/%m/%d %H:%M:%S";
+char_cp const LOG_STAMP_FORMAT = "%y/%m/%d %H:%M:%S";
 
 inline void Write1Log( ofs_t& p_out, const LogEntry_t& log ) {
 
