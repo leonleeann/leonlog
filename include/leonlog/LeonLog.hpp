@@ -180,9 +180,7 @@ inline Log_t& operator<<( Log_t& log_, const void* ptr_ ) {
 	return log_;
 };
 
-inline ost_t& operator<<( ost_t& os_, leon_utl::U64_u u_ ) {
-	return os_ << u_.view();
-};
+// inline ost_t& operator<<( ost_t& os_, leon_utl::U64_u u_ ) { return os_ << u_.view(); };
 
 template <typename C, typename D>
 inline ost_t& operator<<( ost_t& os_, time_point<C, D> tp_ ) {
