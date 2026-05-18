@@ -24,6 +24,7 @@
 
 #include "leonlog/LeonLog.hpp"
 #include "leonlog/LeonLogVer.hpp"
+#include "leonlog/LogCfg.hpp"
 #include "leonlog/StatusFile.hpp"
 #include "leonlog/ThreadName.hpp"
 
@@ -35,6 +36,7 @@ using namespace std::filesystem;
 using abool_t = std::atomic_bool;
 using aptid_t = std::atomic<pthread_t>;
 using ofs_t = std::ofstream;
+using path_t = std::filesystem::path;
 using std::cerr;
 using std::endl;
 using std::make_unique;
@@ -174,17 +176,17 @@ char_cp NameOf( LogLevel_e ll ) {
 	return LOG_LEVEL_NAMES[ll].c_str();
 };
 
-void StartLog( str_cr file_, LogLevel_e levl_, size_t prec_, size_t capa_,
-			   str_cr cpus_, bool head_, bool stdo_, bool stot_ ) {
+void StartLog( str_cr file_, LogCfg_cr conf_, bool head_, bool stdo_, bool stot_ ) {
 	if( s_is_running.load( mo_acquire ) )
 		throw bad_usage( "日志系统已启动, 不能重复初始化!" );
 
 //	const_cast<LogLevel_e&>( g_log_level ) =
-	g_log_level = min( LogLevel_e::Fatal, max( LogLevel_e::Debug, levl_ ) );
-	s_stamp_pre = min<decltype( s_stamp_pre )>( prec_, 9 );
+	g_log_level = min( Fatal, max( Debug, conf_.log_levl ) );
+	s_stamp_pre = min<size_t>( conf_.t_precis, 9 );
 	s_time_unit = std::pow( 10.0, 9 - s_stamp_pre );
+	path_t log_path { conf_.dir_path }; log_path /= file_;
 	s_log_file = file_;
-	s_log_que = make_unique<LogQue_t>( capa_ );
+	s_log_que = std::make_unique<LogQue_t>( conf_.que_capa );
 	s_headr_foot.store( head_ );
 	s_to_stdout = stdo_;
 	s_sto_stamp = stot_;
@@ -193,7 +195,7 @@ void StartLog( str_cr file_, LogLevel_e levl_, size_t prec_, size_t capa_,
 
 	RegistThread( "MainThread" );
 	s_should_run.store( true, mo_release );
-	s_writer = std::thread( WriterThreadBody, &cpus_ );
+	s_writer = std::thread( WriterThreadBody, &conf_.with_cpu );
 	steady_clock::time_point time_out = steady_clock::now() + 1s;
 	while( !s_is_running.load( mo_acquire ) && steady_clock::now() < time_out )
 		std::this_thread::sleep_for( 1ns );
@@ -406,7 +408,7 @@ void WriterThreadBody( str_cp cpus_ ) {
 	// 日志线程自己也可以添加日志,当然就也可以注册有意义的线程名称
 	RegistThread( "Logger" );
 	// cpus_ 只在启动时存在, 一旦主线程离开 StartLog 函数, 就不能使用此对象了!!!
-	if( cpus_ != nullptr && ! cpus_->empty() )
+	if( cpus_ != nullptr && ! cpus_->empty() && *cpus_ != "-1" )
 		PthreadOnlyCPU( *cpus_ );
 
 	while( s_should_run.load( mo_acquire ) ) {
@@ -434,9 +436,9 @@ void ProcessLogs() {
 	s_log_ofs->clear();
 
 	// 每过1秒Flush一下, 所以需要记录时间
-	timespec tsNextFlush, tsNow;
-	timespec_get( &tsNextFlush, TIME_UTC );
-	tsNextFlush += s_flush_ns;
+	timespec next_flush, now_ts;
+	timespec_get( &next_flush, TIME_UTC );
+	next_flush += s_flush_ns;
 
 	LogEntry_t aLog {system_clock::now(), "Logger", str_t{}, LogLevel_e::Infor};
 	if( s_is_rolling.load( mo_acquire ) ) {
@@ -453,17 +455,17 @@ void ProcessLogs() {
 	// 主循环, 等待日志->写日志->判断是否需要轮转或退出, 周而复始...
 	while( s_should_run.load( mo_acquire ) && !s_is_rolling.load( mo_acquire ) ) {
 		// 等一个信号
-		sem_timedwait( &s_new_log, &tsNextFlush );
+		sem_timedwait( &s_new_log, &next_flush );
 
 		while( s_log_que->deque( aLog ) )
 			Write1Log( *s_log_ofs, aLog );
 
 		// 每1秒Flush一下
-		timespec_get( &tsNow, TIME_UTC );
-		if( tsNow > tsNextFlush ) {
+		timespec_get( &now_ts, TIME_UTC );
+		if( now_ts > next_flush ) {
 			s_log_ofs->flush();
-			tsNextFlush = tsNow;
-			tsNextFlush += s_flush_ns;
+			next_flush = now_ts;
+			next_flush += s_flush_ns;
 			WriteStatus();
 		}
 	}

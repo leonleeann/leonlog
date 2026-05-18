@@ -21,6 +21,6 @@ Log_t& operator<<( Log_t& lg_, const set_t<K, C, A>& set_ ) {
 	return lg_;
 };
 
-}; // namespace leon_log
+};	// namespace leon_log
 
 // kate: indent-mode cstyle; indent-width 4; replace-tabs off; tab-width 4;
